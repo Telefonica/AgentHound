@@ -127,7 +127,12 @@ edges:
 def test_fh009_fires_when_memory_kind_is_shared_between_agents():
     """FH-009 fires on the canonical memory_kind=shared_between_agents / scope=user example."""
     result = analyze_text(_FH009_SHARED_MEMORY)
-    assert "FH-009" in rule_ids(result.findings)
+    findings = findings_for(result.findings, "FH-009")
+    assert findings
+    # The reported attack path should reach the downstream external sink, not
+    # stop at the agent that reads the poisoned memory.
+    assert findings[0].path[-1] == "out1"
+    assert "e4" in findings[0].edges
 
 
 # Two untrusted write paths reach the same shared memory. The rule now iterates
