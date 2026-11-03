@@ -1,5 +1,5 @@
 import { MarkerType, type Edge, type Node } from "@xyflow/react";
-import type { Severity } from "@/lib/severity";
+import { SEVERITY_RANK, type Severity } from "@/lib/severity";
 import type { Attack, ControlInfo, Finding, GraphEdge, GraphNode } from "@/types/ThreatModel";
 import {
   cyber,
@@ -36,6 +36,13 @@ export interface CyberNodeData extends Record<string, unknown> {
   controlsLabel: string;
   /** Localised per-effect tags shown next to each control in the tooltip. */
   effectLabels: EffectLabels;
+  findingMark?: NodeFindingMark;
+}
+
+export interface NodeFindingMark {
+  severity: Severity;
+  score: number;
+  count: number;
 }
 
 export interface EffectLabels {
@@ -74,12 +81,11 @@ export function dominantEffect(controls: ControlInfo[]): "total" | "partial" | u
   return undefined;
 }
 
-const SEV_ORDER: Record<Attack["severity"], number> = { critical: 1, high: 0 };
 
 // Scores clamp at 10, so many criticals tie on severity and score alone.
 function compareAttacks(a: Attack, b: Attack): number {
   return (
-    SEV_ORDER[b.severity] - SEV_ORDER[a.severity] ||
+    SEVERITY_RANK[b.severity] - SEVERITY_RANK[a.severity] ||
     b.score - a.score ||
     b.exposure - a.exposure ||
     a.nodes.length - b.nodes.length ||
@@ -126,6 +132,27 @@ export function findingRoute(finding: Pick<Finding, "path" | "edges">, edges: Gr
   const nodeIds = new Set(finding.path);
   routeEdges.forEach((e) => nodeIds.add(e.f).add(e.t));
   return { nodeIds: [...nodeIds], edgeIds: routeEdges.map((e) => e.id) };
+}
+
+export function nodeFindingMarks(
+  findings: Pick<Finding, "path" | "edges" | "severity" | "score">[],
+  edges: GraphEdge[],
+): Map<string, NodeFindingMark> {
+  const marks = new Map<string, NodeFindingMark>();
+  for (const f of findings) {
+    const id = f.path[0];
+    if (id === undefined || f.path.some((n) => n !== id) || findingRoute(f, edges).edgeIds.length > 0) continue;
+    const { severity } = f;
+    const mark = marks.get(id);
+    if (!mark) {
+      marks.set(id, { severity, score: f.score, count: 1 });
+      continue;
+    }
+    mark.count += 1;
+    if (SEVERITY_RANK[severity] > SEVERITY_RANK[mark.severity]) mark.severity = severity;
+    mark.score = Math.max(mark.score, f.score);
+  }
+  return marks;
 }
 
 export interface PlaybackFrame {
@@ -201,7 +228,10 @@ export function buildGraph(
   edgeControls: Record<string, ControlInfo[]> = {},
   controlsLabel = "",
   effectLabels: EffectLabels = { total: "", partial: "" },
+  findings: Pick<Finding, "path" | "edges" | "severity" | "score">[] = [],
 ): BuiltGraph {
+  const findingMarks = solved ? new Map<string, NodeFindingMark>() : nodeFindingMarks(findings, edges);
+
   const attackedNodeIds = new Set<string>();
   const attackPairs = new Set<string>();
   attacks.forEach((a) => {
@@ -236,6 +266,7 @@ export function buildGraph(
         controls: nodeControls[n.id] ?? [],
         controlsLabel,
         effectLabels,
+        findingMark: findingMarks.get(n.id),
       },
       // Protected nodes sit above neighbours so the padlock stays reachable.
       zIndex: protectedTargets.has(n.id) ? 6 : 1,

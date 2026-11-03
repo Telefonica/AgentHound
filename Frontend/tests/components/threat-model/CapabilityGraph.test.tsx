@@ -389,6 +389,16 @@ describe("CapabilityGraph — isolated finding", () => {
     expect(Object.keys(canvas.props?.edgeControls ?? {})).toEqual(["e1", "e3"]);
   });
 
+  it("hands the canvas every finding, then only the isolated one", async () => {
+    getFindingMock.mockResolvedValue(f1Detail);
+    render({ selectedFindingId: "f1" });
+    expect(canvas.props?.findings).toBe(findings);
+
+    isolate();
+    await settle();
+    expect(canvas.props?.findings?.map((f) => f.id)).toEqual(["f1"]);
+  });
+
   it("goes back to the whole graph when shown in context, without refetching", async () => {
     getFindingMock.mockResolvedValue(f1Detail);
     render({ selectedFindingId: "f1" });

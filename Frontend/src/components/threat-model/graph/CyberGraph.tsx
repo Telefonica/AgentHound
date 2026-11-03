@@ -18,8 +18,8 @@ import {
   useStore,
 } from "@xyflow/react";
 import { toPng } from "html-to-image";
-import { Spinner, applyAlpha } from "@telefonica/mistica";
-import type { Attack, ControlInfo, GraphEdge, GraphNode, NodeType } from "@/types/ThreatModel";
+import { Spinner, Tag, applyAlpha } from "@telefonica/mistica";
+import type { Attack, ControlInfo, Finding, GraphEdge, GraphNode, NodeType } from "@/types/ThreatModel";
 import { cyber, getSeverityPath, NODE_STYLE, useIsDarkMode, type PathSeverity } from "@/components/threat-model/graph/cyberGraphTheme";
 import { GLYPH, nodeTypes } from "@/components/threat-model/graph/nodeTypes";
 import { edgeTypes, SeverityPathContext } from "@/components/threat-model/graph/edgeTypes";
@@ -38,6 +38,7 @@ export interface CyberGraphProps {
   nodes: GraphNode[];
   edges: GraphEdge[];
   attacks: Attack[];
+  findings?: Finding[];
   /** Analysis name, shown only in fullscreen: the page heading that normally
    * identifies the test is not visible once the canvas takes over the screen. */
   name?: string;
@@ -81,6 +82,9 @@ export interface CyberGraphProps {
     legendMedium: string;
     legendLow: string;
     legendInfo: string;
+    legendNodeFindings: string;
+    legendNodeFinding: string;
+    legendNodeFindingSample: string;
     legendNodeTypes: string;
     nodeTypeLabel: Record<Exclude<NodeType, "control">, string>;
     recommendedControls: string;
@@ -109,6 +113,8 @@ type PlayedRoute = FindingRoute & { label: string; summary?: string };
 
 // Grows with tall screens: large dagre layouts are bounded by height.
 const CANVAS_H = "clamp(540px, 70vh, 820px)";
+const NO_FINDINGS: Finding[] = [];
+const LEGEND_SAMPLE_ZOOM = 0.65;
 const MIN_ZOOM = 0.25;
 const MAX_ZOOM = 2.5;
 // Fitting ignores the zoom floor, otherwise large graphs never fit whole.
@@ -135,14 +141,14 @@ function exitFullscreen() {
 }
 
 const Flow = forwardRef<CyberGraphHandle, CyberGraphProps>(function Flow(
-  { solved, nodes, edges, attacks, name, nodeControls, edgeControls, onNodeClick, onToggleView, solutionAvailable, highlight, onClearHighlight, isolated = false, onToggleIsolated, isolating = false, isolateFailed = false, pendingRoute = null, labels },
+  { solved, nodes, edges, attacks, findings = NO_FINDINGS, name, nodeControls, edgeControls, onNodeClick, onToggleView, solutionAvailable, highlight, onClearHighlight, isolated = false, onToggleIsolated, isolating = false, isolateFailed = false, pendingRoute = null, labels },
   ref,
 ) {
   const isDark = useIsDarkMode();
   const severityPath = useMemo(() => getSeverityPath(isDark), [isDark]);
   const built = useMemo(
-    () => buildGraph(nodes, edges, attacks, solved, nodeControls, edgeControls, labels.recommendedControls, labels.controlEffect),
-    [nodes, edges, attacks, solved, nodeControls, edgeControls, labels.recommendedControls, labels.controlEffect],
+    () => buildGraph(nodes, edges, attacks, solved, nodeControls, edgeControls, labels.recommendedControls, labels.controlEffect, findings),
+    [nodes, edges, attacks, solved, nodeControls, edgeControls, labels.recommendedControls, labels.controlEffect, findings],
   );
 
   // Node types actually present in the graph, in reading order, for the legend.
@@ -168,8 +174,10 @@ const Flow = forwardRef<CyberGraphHandle, CyberGraphProps>(function Flow(
       // "neutralized" (safe by an upstream cut) and "neutral" both read as safe.
       else if (variant === "neutralized" || variant === "neutral") hasSafe = true;
     });
-    return { severities, hasPrimaryRoute, hasBlocked, hasMitigated, hasSafe };
-  }, [built.edges]);
+    const hasNodeFinding = built.nodes.some((n) => n.data.findingMark);
+    const hasPathRows = hasPrimaryRoute || severities.size > 0 || hasSafe;
+    return { severities, hasPrimaryRoute, hasBlocked, hasMitigated, hasSafe, hasPathRows, hasNodeFinding };
+  }, [built.edges, built.nodes]);
 
   // Refine node positions with a dagre `layered` layout (React Flow's official
   // dagre approach): dagre reorders nodes within their type-column to minimise
@@ -533,7 +541,7 @@ const Flow = forwardRef<CyberGraphHandle, CyberGraphProps>(function Flow(
               </>
             ) : (
               <>
-                {(legendState.hasPrimaryRoute || legendState.severities.size > 0 || legendState.hasSafe) && (
+                {legendState.hasPathRows && (
                   <div style={legendHeading}>{labels.legendPathSeverity}</div>
                 )}
                 {legendState.hasPrimaryRoute && (
@@ -549,11 +557,23 @@ const Flow = forwardRef<CyberGraphHandle, CyberGraphProps>(function Flow(
                 {legendState.hasSafe && <LegendRow color={cyber.neutral} text={labels.legendSafe} />}
               </>
             )}
+            {!solved && legendState.hasNodeFinding && (
+              <>
+                {legendState.hasPathRows && <div style={legendDivider} />}
+                <div style={legendHeading}>{labels.legendNodeFindings}</div>
+                <div data-testid="legend-node-finding" style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11, color: cyber.textSecondary }}>
+                  <span style={{ display: "inline-flex", borderRadius: 999, border: `1px solid ${cyber.gridStrong}`, zoom: LEGEND_SAMPLE_ZOOM }}>
+                    <Tag type="inactive" small>{labels.legendNodeFindingSample}</Tag>
+                  </span>
+                  {labels.legendNodeFinding}
+                </div>
+              </>
+            )}
             {presentTypes.length > 0 && (
               <>
                 <div style={legendDivider} />
                 <div style={legendHeading}>{labels.legendNodeTypes}</div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, maxWidth: 208 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, maxWidth: 240 }}>
                   {presentTypes.map((t) => (
                     <NodeTypeChip key={t} type={t} label={labels.nodeTypeLabel[t]} />
                   ))}

@@ -195,6 +195,9 @@
       "medium": "Medium finding path",
       "low": "Low finding path",
       "info": "Info finding path",
+      "nodeFindings": "Node findings",
+      "nodeFinding": "Top score and how many more",
+      "nodeFindingSample": "max · +N",
       "nodeTypes": "Node types",
       "node": {
         "input": "Entry point",
@@ -218,6 +221,7 @@
     "showTopFindingGroups": "Show only the top {count}",
     "findingSummary": "{title} · score {score}",
     "highlightedRoute": "Highlighted route",
+    "nodeFindings": "{count, plural, one {# finding} other {# findings}} on this node · max {score}",
     "playingRoute": "Playing route",
     "nextRoute": "{id} will be highlighted when this run ends",
     "clearHighlight": "Show all",

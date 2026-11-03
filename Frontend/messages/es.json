@@ -195,6 +195,9 @@
       "medium": "Ruta de hallazgo medio",
       "low": "Ruta de hallazgo bajo",
       "info": "Ruta de hallazgo informativo",
+      "nodeFindings": "Hallazgos en nodos",
+      "nodeFinding": "Puntuación máx. y cuántos más hay",
+      "nodeFindingSample": "máx. · +N",
       "nodeTypes": "Tipos de nodo",
       "node": {
         "input": "Punto de entrada",
@@ -218,6 +221,7 @@
     "showTopFindingGroups": "Ver solo los {count} primeros",
     "findingSummary": "{title} · puntuación {score}",
     "highlightedRoute": "Ruta resaltada",
+    "nodeFindings": "{count, plural, one {# hallazgo} other {# hallazgos}} en este nodo · máx. {score}",
     "playingRoute": "Reproduciendo ruta",
     "nextRoute": "{id} se resaltará al terminar",
     "clearHighlight": "Ver todo",

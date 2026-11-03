@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { buildGraph, findingRoute, playbackFrame, primaryRoute, primaryRouteId } from "./toReactFlow";
-import type { Attack, GraphEdge } from "@/types/ThreatModel";
+import { buildGraph, findingRoute, nodeFindingMarks, playbackFrame, primaryRoute, primaryRouteId } from "./toReactFlow";
+import type { Attack, Finding, GraphEdge, GraphNode } from "@/types/ThreatModel";
 
 const edges: GraphEdge[] = [
   { id: "e1", f: "a", t: "b" },
@@ -124,5 +124,69 @@ describe("primaryRoute", () => {
       ["ab", "A2"],
       ["bd", "A2"],
     ]);
+  });
+});
+
+describe("nodeFindingMarks", () => {
+  type NodeFinding = Pick<Finding, "path" | "edges" | "severity" | "score">;
+  const finding = (path: string[], overrides: Partial<NodeFinding> = {}): NodeFinding => ({
+    path,
+    edges: [],
+    severity: "high",
+    score: 8,
+    ...overrides,
+  });
+
+  it("marks the node a finding without hops points at", () => {
+    expect(nodeFindingMarks([finding(["c"], { severity: "critical", score: 9.8 })], edges)).toEqual(
+      new Map([["c", { severity: "critical", score: 9.8, count: 1 }]]),
+    );
+  });
+
+  it("leaves route findings to their edges", () => {
+    expect(nodeFindingMarks([finding(["a", "b"], { edges: ["e1"] }), finding(["b", "c"], { edges: undefined })], edges).size).toBe(0);
+  });
+
+  it("marks a finding whose edges are not in the rendered graph", () => {
+    expect([...nodeFindingMarks([finding(["c"], { edges: ["gone"] })], edges).keys()]).toEqual(["c"]);
+  });
+
+  it("leaves unmarked a route whose hops are missing from the graph", () => {
+    expect(nodeFindingMarks([finding(["a", "c"], { edges: ["gone"] })], edges).size).toBe(0);
+  });
+
+  it("keeps the worst severity and score and counts every finding on a node", () => {
+    const marks = nodeFindingMarks(
+      [
+        finding(["c"], { severity: "medium", score: 9 }),
+        finding(["c"], { severity: "critical", score: 7 }),
+        finding(["c", "c"], { severity: "none", score: 1 }),
+      ],
+      edges,
+    );
+    expect(marks.get("c")).toEqual({ severity: "critical", score: 9, count: 3 });
+    expect(nodeFindingMarks([finding(["c"], { severity: "none" })], edges).get("c")?.severity).toBe("none");
+  });
+});
+
+describe("buildGraph node findings", () => {
+  const nodes: GraphNode[] = ["a", "b", "c"].map((id) => ({ id, type: "tool", label: id, x: 0, y: 0 }));
+  const findings: Pick<Finding, "path" | "edges" | "severity" | "score">[] = [
+    { path: ["c"], edges: [], severity: "critical", score: 9.8 },
+    { path: ["a", "b"], edges: ["e1"], severity: "high", score: 8.8 },
+  ];
+  const marks = (solved: boolean) =>
+    buildGraph(nodes, edges, [], solved, {}, {}, "", undefined, findings).nodes.map((n) => [n.id, n.data.findingMark]);
+
+  it("puts node findings on their node in the findings view", () => {
+    expect(marks(false)).toEqual([
+      ["a", undefined],
+      ["b", undefined],
+      ["c", { severity: "critical", score: 9.8, count: 1 }],
+    ]);
+  });
+
+  it("drops them in the solution view", () => {
+    expect(marks(true).every(([, mark]) => mark === undefined)).toBe(true);
   });
 });

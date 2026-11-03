@@ -1,6 +1,8 @@
 import { memo } from "react";
-import { applyAlpha } from "@telefonica/mistica";
+import { useFormatter, useTranslations } from "next-intl";
+import { applyAlpha, ScreenReaderOnly } from "@telefonica/mistica";
 import { Handle, Position, type NodeProps, type NodeTypes } from "@xyflow/react";
+import SeverityBadge from "@/components/threat-model/SeverityBadge";
 import type { NodeType } from "@/types/ThreatModel";
 import {
   cyber,
@@ -10,7 +12,7 @@ import {
   NODE_STYLE,
   nodeSize,
 } from "@/components/threat-model/graph/cyberGraphTheme";
-import { type CyberNode } from "@/components/threat-model/graph/toReactFlow";
+import { type CyberNode, type NodeFindingMark } from "@/components/threat-model/graph/toReactFlow";
 import type { ControlInfo } from "@/types/ThreatModel";
 
 /* ---- representative glyphs (inline SVG, stroke = neon accent) -------------- */
@@ -55,6 +57,25 @@ export function ControlTipItem({ control, labels }: { control: ControlInfo; labe
     <span className="ch-lock-tip-item">
       {control.name}
       {tag && <span className="ch-lock-tip-tag" style={{ color: tag.color, borderColor: tag.color }}>{tag.text}</span>}
+    </span>
+  );
+}
+
+export function NodeFindingCorner({ mark }: { mark: NodeFindingMark }) {
+  const t = useTranslations("results");
+  const format = useFormatter();
+  const score = format.number(mark.score, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const description = t("nodeFindings", { count: mark.count, score });
+  return (
+    <span title={description} style={{ position: "absolute", top: -12, left: 14, zIndex: 3 }}>
+      <span aria-hidden style={{ display: "inline-flex" }}>
+        <SeverityBadge severity={mark.severity} small withIcon dataAttributes={{ testid: "node-finding-badge", severity: mark.severity }}>
+          {mark.count > 1 ? `${score} · +${mark.count - 1}` : score}
+        </SeverityBadge>
+      </span>
+      <ScreenReaderOnly>
+        <span>{description}</span>
+      </ScreenReaderOnly>
     </span>
   );
 }
@@ -128,6 +149,7 @@ const CyberNodeView = memo(({ data, selected }: NodeProps<CyberNode>) => {
           <span className="ch-reactor-ring" aria-hidden style={{ borderRadius: style.radius }} />
         </>
       )}
+      {data.findingMark && <NodeFindingCorner mark={data.findingMark} />}
       <Handle type="target" position={Position.Left} style={{ background: accent, width: 9, height: 9, border: "none", zIndex: 2 }} />
       <div
         style={{
