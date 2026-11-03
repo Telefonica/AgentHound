@@ -1,14 +1,14 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Box, Boxed, Inline, Stack, Text1, Touchable, IconSearchRegular, skinVars, useTheme } from "@telefonica/mistica";
+import { Box, Boxed, Inline, Stack, Text1, IconSearchRegular, skinVars } from "@telefonica/mistica";
 import NodeDetailDrawer from "@/components/threat-model/NodeDetailDrawer";
+import PrioritizedFindings from "@/components/threat-model/PrioritizedFindings";
 import CyberGraph, { type CyberGraphHandle, type GraphHighlight } from "@/components/threat-model/graph/CyberGraph";
 import { findingRoute, primaryRoute, primaryRouteId } from "@/components/threat-model/graph/toReactFlow";
 import { NODE_STYLE } from "@/components/threat-model/graph/cyberGraphTheme";
 import { routeSummary } from "@/lib/results/findingDisplay";
 import { useFindingPathGraph } from "@/hooks/useFindingPathGraph";
 import type { FindingPathGraph } from "@/lib/api/adapters";
-import { severityAccentColor } from "@/lib/threatModelColors";
 import type { Attack, ControlInfo, Finding, GraphEdge, GraphNode } from "@/types/ThreatModel";
 
 interface CapabilityGraphProps {
@@ -47,7 +47,6 @@ const NO_ATTACKS: Attack[] = [];
 function CapabilityGraph({ analysisId, solved, nodes, edges, findings, attacks, name, appliedControlCount, nodeControlInfo, edgeControlInfo, onToggleView, solutionAvailable, findingLabelById, selectedFindingId, onSelectFinding, onClearSelection }: CapabilityGraphProps) {
   const t = useTranslations("results");
   const tNode = useTranslations("node");
-  const { isDarkMode } = useTheme();
   const [focusedNode, setFocusedNode] = useState<GraphNode | null>(null);
   const graphRef = useRef<CyberGraphHandle>(null);
 
@@ -250,42 +249,14 @@ function CapabilityGraph({ analysisId, solved, nodes, edges, findings, attacks, 
       )}
 
       {!solved && findings.length > 0 && (
-        <Boxed dataAttributes={{ testid: "prioritized-findings" }}>
-          <Box paddingX={16} paddingY={12}>
-            <Stack space={8}>
-              <Text1 medium color={skinVars.colors.error}>{t("prioritizedFindings", { count: findings.length })}</Text1>
-              <Stack space={2}>
-                {findings.map((f) => {
-                  const row = (
-                    <Inline space={4} wrap>
-                      <Text1 medium color={severityAccentColor(f.severity, isDarkMode)}>{findingLabelById.get(f.id) ?? f.ruleId}</Text1>
-                      <Text1 regular color={skinVars.colors.textSecondary}>{t("findingSummary", { title: f.title, score: f.score })}</Text1>
-                    </Inline>
-                  );
-                  if (f.path.length === 0) return <Box key={f.id} paddingX={8} paddingY={4}>{row}</Box>;
-                  const selected = f.id === selectedFindingId;
-                  return (
-                    <Touchable
-                      key={f.id}
-                      onPress={() => onSelectFinding(f.id)}
-                      dataAttributes={{ testid: "prioritized-finding" }}
-                      aria-current={selected ? "true" : undefined}
-                      aria-description={t("showRouteHint")}
-                      style={{
-                        display: "block",
-                        width: "100%",
-                        borderRadius: skinVars.borderRadii.container,
-                        background: selected ? skinVars.colors.brandLow : undefined,
-                      }}
-                    >
-                      <Box paddingX={8} paddingY={4}>{row}</Box>
-                    </Touchable>
-                  );
-                })}
-              </Stack>
-            </Stack>
-          </Box>
-        </Boxed>
+        <PrioritizedFindings
+          key={analysisId}
+          findings={findings}
+          findingLabelById={findingLabelById}
+          nodesById={nodesById}
+          selectedFindingId={selectedFindingId}
+          onSelectFinding={onSelectFinding}
+        />
       )}
 
       {focusedNode && (

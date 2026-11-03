@@ -15,6 +15,7 @@ function finding(overrides: Partial<Finding> = {}): Finding {
     desc: "",
     category: "attack",
     findingClass: "attack",
+    groupId: "g1",
     path: [],
     evidence: {},
     ...overrides,

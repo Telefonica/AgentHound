@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { attacksFromFindings, toGraphNodes } from "./adapters";
-import type { BackendGraphNode } from "./types";
+import { attacksFromFindings, toAnalysisResult, toGraphNodes } from "./adapters";
+import type { BackendFinding, BackendGraphNode, FindingGroup } from "./types";
 import type { Finding } from "@/types/ThreatModel";
 
 function node(type: string, properties: Record<string, unknown>): BackendGraphNode {
@@ -59,7 +59,7 @@ describe("toGraphNodes subtitle", () => {
 });
 
 function finding(id: string, severity: Finding["severity"], score: number, path: string[]): Finding {
-  return { id, ruleId: "FH-001", severity, category: "capability_path", title: id, desc: "", path, score, findingClass: "attack" };
+  return { id, ruleId: "FH-001", severity, category: "capability_path", title: id, desc: "", path, score, findingClass: "attack", groupId: id };
 }
 
 describe("attacksFromFindings", () => {
@@ -101,5 +101,55 @@ describe("attacksFromFindings", () => {
   it("labels each route like the prioritized list, numbering repeated rules", () => {
     const labelled = [...findings.slice(0, 2), { ...finding("f6", "high", 8.8, ["delete"]), ruleId: "FH-005" }];
     expect(attacksFromFindings(labelled).map((a) => a.label)).toEqual(["FH-001 #1", "FH-001 #2", "FH-005"]);
+  });
+});
+
+describe("toAnalysisResult groups", () => {
+  const backendFinding = (id: string, groupId: string, path: string[]): BackendFinding => ({
+    id,
+    rule_id: "FH-001",
+    title: id,
+    severity: "high",
+    score: 8,
+    category: "capability_path",
+    path,
+    edges: [],
+    derivation: "",
+    evidence: {},
+    recommended_controls: [],
+    owasp_agentic: [],
+    owasp_llm: [],
+    mitre_atlas: [],
+    finding_class: "attack",
+    group_id: groupId,
+  });
+  const group = (groupId: string, anchor: string | null): FindingGroup => ({
+    group_id: groupId,
+    rule_id: "FH-001",
+    title: "",
+    group_by: anchor ? "source" : "rule",
+    anchor_node_id: anchor,
+    finding_class: "attack",
+    count: 1,
+    max_score: 8,
+    severity: "high",
+    representative_finding_id: "",
+    finding_ids: [],
+  });
+
+  it("carries the backend's group anchor onto each finding, and none for rule-wide groups", () => {
+    const result = toAnalysisResult(
+      { analysis_id: "a1", status: "done", name: "a", warnings: [], summary: { nodes: 0, edges: 0, findings: 2, critical: 0, high: 2, medium: 0, max_score: 8 } },
+      { nodes: [], edges: [] },
+      {
+        findings: [backendFinding("f1", "g1", ["in", "agent"]), backendFinding("f2", "g2", ["agent"])],
+        groups: [group("g1", "in"), group("g2", null)],
+      },
+    );
+
+    expect(result.findings.map((f) => [f.id, f.groupAnchor])).toEqual([
+      ["f1", "in"],
+      ["f2", undefined],
+    ]);
   });
 });

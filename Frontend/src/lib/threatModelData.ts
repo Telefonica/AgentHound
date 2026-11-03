@@ -60,6 +60,7 @@ export const MOCK_FINDINGS: Finding[] = [
     mitre: ["AML.T0054", "AML.T0048"],
     controls: ["humanInTheLoop", "outputFiltering", "piiRedaction", "leastPrivilege"],
     findingClass: "attack",
+    groupId: "FH-001",
   },
   {
     id: "FH-006",
@@ -84,6 +85,7 @@ export const MOCK_FINDINGS: Finding[] = [
     mitre: ["AML.T0051"],
     controls: ["contentValidation", "urlAllowlist", "humanInTheLoop"],
     findingClass: "attack",
+    groupId: "FH-006",
   },
   {
     id: "FH-011",
@@ -107,6 +109,7 @@ export const MOCK_FINDINGS: Finding[] = [
     mitre: ["AML.T0040"],
     controls: ["humanInTheLoop", "dryRunFirst", "rollbackReady"],
     findingClass: "attack",
+    groupId: "FH-011",
   },
   {
     id: "FH-013",
@@ -130,6 +133,7 @@ export const MOCK_FINDINGS: Finding[] = [
     mitre: ["AML.T0054"],
     controls: ["piiRedaction", "outputFiltering"],
     findingClass: "attack",
+    groupId: "FH-013",
   },
   {
     id: "FH-007",
@@ -151,6 +155,7 @@ export const MOCK_FINDINGS: Finding[] = [
     mitre: ["AML.T0054"],
     controls: ["delegationScoping", "interAgentAuthentication"],
     findingClass: "attack",
+    groupId: "FH-007",
   },
 ];
 

@@ -73,7 +73,7 @@ describe("toFindingPathGraph", () => {
   it("maps the finding and keeps only the nodes and edges of its route", () => {
     const graph = toFindingPathGraph(detail);
 
-    expect(graph.finding).toMatchObject({ id: "finding_002", ruleId: "FH-011", severity: "high" });
+    expect(graph.finding).toMatchObject({ id: "finding_002", ruleId: "FH-011", severity: "high", groupId: "g1" });
     expect(graph.nodes.map((n) => [n.id, n.type])).toEqual([
       ["input_email", "input"],
       ["agent_triage", "agent"],

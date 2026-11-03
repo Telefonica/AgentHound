@@ -43,6 +43,7 @@ test.describe("Primary route", () => {
       await expect(canvas(page)).toHaveScreenshot(`graph-primary-route-${order}.png`);
       await expect(primaryPath(page)).toHaveScreenshot(`primary-path-${order}.png`);
 
+      await page.getByTestId("prioritized-finding-group").filter({ hasText: /^FH-011/ }).click();
       await page.getByTestId("prioritized-finding").filter({ hasText: new RegExp(`^${label}(?!\\d)`) }).click();
       await expect(canvas(page).getByRole("status")).toContainText(label);
       await expect(canvas(page).getByRole("status")).toContainText("customer_records_delete");

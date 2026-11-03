@@ -144,6 +144,7 @@ export function toFinding(f: BackendFinding): Finding {
     mitre: f.mitre_atlas,
     controls: f.recommended_controls,
     findingClass: f.finding_class,
+    groupId: f.group_id,
   };
 }
 
@@ -416,7 +417,8 @@ export function toAnalysisResult(
   graph: BackendGraph,
   findingsResponse: FindingsResponse,
 ): AnalysisResult {
-  const findings = findingsResponse.findings.map(toFinding);
+  const anchorByGroup = new Map(findingsResponse.groups.map((g) => [g.group_id, g.anchor_node_id]));
+  const findings = findingsResponse.findings.map((f) => ({ ...toFinding(f), groupAnchor: anchorByGroup.get(f.group_id) ?? undefined }));
   const summary: BackendSummary = create.summary;
   const low = Math.max(0, summary.findings - summary.critical - summary.high - summary.medium);
   return {

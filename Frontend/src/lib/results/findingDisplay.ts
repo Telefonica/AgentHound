@@ -18,3 +18,18 @@ export function findingLabels(findings: Pick<Finding, "id" | "ruleId">[]): Map<s
 export function routeSummary(path: string[], nodesById: Map<string, Pick<GraphNode, "label">>): string {
   return path.map((id) => (nodesById.get(id)?.label ?? id).replace(/\n/g, " ")).join(" → ");
 }
+
+export interface FindingPattern<F> {
+  id: string;
+  findings: [F, ...F[]];
+}
+
+export function groupFindings<F extends Pick<Finding, "groupId">>(findings: F[]): FindingPattern<F>[] {
+  const groups = new Map<string, FindingPattern<F>>();
+  for (const f of findings) {
+    const group = groups.get(f.groupId);
+    if (group) group.findings.push(f);
+    else groups.set(f.groupId, { id: f.groupId, findings: [f] });
+  }
+  return [...groups.values()];
+}

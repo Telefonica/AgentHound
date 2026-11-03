@@ -8,6 +8,7 @@ async function settle(page: Page) {
 async function openResults(page: Page) {
   await page.goto(`/tests/${OPS_DESTRUCTIVE_ID}`);
   await page.getByTestId("prioritized-finding").first().waitFor();
+  await page.getByTestId("prioritized-finding-group").filter({ hasText: /^FH-011/ }).click();
   await settle(page);
 }
 
@@ -41,7 +42,7 @@ test.beforeEach(async ({ page, context, baseURL }) => {
 });
 
 test.describe("Finding route highlight", () => {
-  test("shows the full graph with numbered duplicates in the prioritized list", async ({ page }) => {
+  test("shows the full graph with numbered duplicates in the expanded group", async ({ page }) => {
     await openResults(page);
 
     await expect(routePanel(page)).toHaveCount(0);
@@ -61,7 +62,7 @@ test.describe("Finding route highlight", () => {
     );
     expect(overflowing).toEqual([]);
     await expect(canvas(page)).toHaveScreenshot("graph-default.png");
-    await expect(prioritized(page)).toHaveScreenshot("prioritized-list-default.png");
+    await expect(prioritized(page)).toHaveScreenshot("prioritized-list-fh-011-expanded.png");
   });
 
   test("singles out a finding's route from the prioritized list", async ({ page }) => {

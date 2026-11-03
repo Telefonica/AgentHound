@@ -4,6 +4,7 @@ import { API_ORIGIN, mockOpsDestructiveAnalysis, OPS_DESTRUCTIVE_ID } from "./mo
 async function openResults(page: Page) {
   await page.goto(`/tests/${OPS_DESTRUCTIVE_ID}`);
   await page.getByTestId("prioritized-finding").first().waitFor();
+  await page.getByTestId("prioritized-finding-group").filter({ hasText: /^FH-011/ }).click();
   await page.evaluate(() => document.fonts.ready);
 }
 
