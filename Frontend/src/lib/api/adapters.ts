@@ -11,6 +11,7 @@
  */
 
 import { formatSnakeCase, formatValue, listItems } from "@/lib/format";
+import { findingLabels } from "@/lib/results/findingDisplay";
 import type { Severity } from "@/lib/severity";
 import type {
   Attack,
@@ -316,14 +317,23 @@ export function propPositive(key: string, value: unknown): boolean | undefined {
 /** Build the graph's attack-path overlays from critical/high findings: each
  * such finding's node path becomes a highlighted attack route. */
 export function attacksFromFindings(findings: Finding[]): Attack[] {
+  // Containment, not mere contact: findings on the shared entry/agent nodes touch every route.
+  const exposure = (path: string[]) => {
+    const nodes = new Set(path);
+    const total = findings.reduce((sum, f) => (f.path.every((id) => nodes.has(id)) ? sum + f.score : sum), 0);
+    return Number(total.toFixed(1));
+  };
+  const labels = findingLabels(findings);
   return findings
     .filter((f) => f.severity === "critical" || f.severity === "high")
     .map((f) => ({
       id: f.id,
       severity: f.severity as Extract<Severity, "critical" | "high">,
+      score: f.score,
+      exposure: exposure(f.path),
       width: f.severity === "critical" ? 2.5 : 2,
       nodes: f.path,
-      label: f.ruleId,
+      label: labels.get(f.id) ?? f.ruleId,
       dash: false,
     }));
 }

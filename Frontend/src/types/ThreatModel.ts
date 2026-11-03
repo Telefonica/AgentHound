@@ -62,6 +62,9 @@ export interface GraphEdge {
 export interface Attack {
   id: string;
   severity: Extract<Severity, "critical" | "high">;
+  score: number;
+  /** Summed score of every finding whose path lies entirely within this path. */
+  exposure: number;
   width: number;
   nodes: string[];
   label: string;

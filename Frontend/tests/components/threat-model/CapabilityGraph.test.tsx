@@ -282,7 +282,7 @@ describe("CapabilityGraph — isolated finding", () => {
 
   it("hides the primary route card while a finding is isolated", async () => {
     getFindingMock.mockResolvedValue(f1Detail);
-    const attacks: Attack[] = [{ id: "a1", severity: "critical", width: 3, nodes: ["input", "planner", "crm"], label: "FH-001", dash: false }];
+    const attacks: Attack[] = [{ id: "a1", severity: "critical", score: 10, exposure: 10, width: 3, nodes: ["input", "planner", "crm"], label: "FH-001", dash: false }];
     render({ selectedFindingId: "f1", attacks });
     expect(view.container.textContent).toContain("Ruta crítica principal");
 

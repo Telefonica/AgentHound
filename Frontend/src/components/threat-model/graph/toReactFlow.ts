@@ -74,13 +74,23 @@ export function dominantEffect(controls: ControlInfo[]): "total" | "partial" | u
   return undefined;
 }
 
-/** Ordered attack chosen for the "play attack" sequence: highest severity first. */
+const SEV_ORDER: Record<Attack["severity"], number> = { critical: 1, high: 0 };
+
+// Scores clamp at 10, so many criticals tie on severity and score alone.
+function compareAttacks(a: Attack, b: Attack): number {
+  return (
+    SEV_ORDER[b.severity] - SEV_ORDER[a.severity] ||
+    b.score - a.score ||
+    b.exposure - a.exposure ||
+    a.nodes.length - b.nodes.length ||
+    a.id.localeCompare(b.id, undefined, { numeric: true })
+  );
+}
+
+/** Attack chosen for the "play attack" sequence: highest severity and score, then
+ * the route concentrating the most risk, then the most direct one. */
 function primaryAttack(attacks: Attack[]): Attack | undefined {
-  return [...attacks].sort((a, b) => {
-    const SEV_ORDER: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1, none: 0 };
-    const sev = (s: Attack["severity"]) => SEV_ORDER[s] ?? 0;
-    return sev(b.severity) - sev(a.severity) || b.width - a.width;
-  })[0];
+  return attacks.reduce<Attack | undefined>((best, a) => (!best || compareAttacks(a, best) < 0 ? a : best), undefined);
 }
 
 /** Id of the primary FH-001 route (e.g. "FH-001"), for the "primary route" legend row. */

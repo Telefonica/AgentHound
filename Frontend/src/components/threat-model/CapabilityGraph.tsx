@@ -209,11 +209,11 @@ function CapabilityGraph({ analysisId, solved, nodes, edges, findings, attacks, 
       />
 
       {!solved && !isolatedGraph && primaryPath && (
-        <Boxed>
+        <Boxed dataAttributes={{ testid: "primary-path" }}>
           <Box paddingX={16} paddingY={12}>
             <Stack space={8}>
               <Inline space={8} alignItems="center" wrap verticalSpace={4}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: skinVars.colors.error, flex: "0 0 auto" }} />
+                <span style={{ display: "block", width: 8, height: 8, borderRadius: "50%", background: skinVars.colors.error }} />
                 <Text1 medium color={skinVars.colors.error}>{t("primaryPath")}</Text1>
                 <span
                   style={{
@@ -233,7 +233,7 @@ function CapabilityGraph({ analysisId, solved, nodes, edges, findings, attacks, 
                 {primaryPath.steps.map((n, i) => (
                   <Inline key={`${n.id}-${i}`} space={4} alignItems="center">
                     {i > 0 && <Text1 regular color={skinVars.colors.textSecondary}>→</Text1>}
-                    <span style={{ width: 7, height: 7, borderRadius: "50%", background: NODE_STYLE[n.type].accent, flex: "0 0 auto" }} />
+                    <span style={{ display: "block", width: 7, height: 7, borderRadius: "50%", background: NODE_STYLE[n.type].accent }} />
                     <Text1 regular>{n.label.replace(/\n/g, " ")}</Text1>
                   </Inline>
                 ))}
