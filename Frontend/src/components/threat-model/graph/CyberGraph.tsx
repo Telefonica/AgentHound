@@ -120,6 +120,7 @@ const MAX_ZOOM = 2.5;
 // Fitting ignores the zoom floor, otherwise large graphs never fit whole.
 const FIT_OPTIONS = { padding: 0.08, minZoom: 0 };
 const ROUTE_FIT_OPTIONS = { padding: 0.3, minZoom: 0, maxZoom: 1.2 };
+const fitDuration = () => (window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 400);
 const TOOLBAR_CLEARANCE = 56;
 const TITLE_GAP = 12;
 
@@ -278,8 +279,8 @@ const Flow = forwardRef<CyberGraphHandle, CyberGraphProps>(function Flow(
   useEffect(() => {
     const raf = requestAnimationFrame(() =>
       highlightNodes.size > 0
-        ? fitView({ nodes: [...highlightNodes].map((id) => ({ id })), ...ROUTE_FIT_OPTIONS, duration: 400 })
-        : fitView({ ...FIT_OPTIONS, duration: 400 }),
+        ? fitView({ nodes: [...highlightNodes].map((id) => ({ id })), ...ROUTE_FIT_OPTIONS, duration: fitDuration() })
+        : fitView({ ...FIT_OPTIONS, duration: fitDuration() }),
     );
     return () => cancelAnimationFrame(raf);
   }, [layoutedNodes, isFullscreen, highlightNodes, fitView]);
@@ -505,7 +506,7 @@ const Flow = forwardRef<CyberGraphHandle, CyberGraphProps>(function Flow(
                 glyph="⇄"
               />
             )}
-            <ToolbarButton onClick={() => fitView({ ...FIT_OPTIONS, duration: 400 })} label={labels.fit} glyph="⤢" />
+            <ToolbarButton onClick={() => fitView({ ...FIT_OPTIONS, duration: fitDuration() })} label={labels.fit} glyph="⤢" />
             <ToolbarButton onClick={download} label={labels.download} glyph="↓" />
           </div>
         </Panel>

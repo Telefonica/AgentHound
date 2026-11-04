@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 
-import { buildYamlExport } from "./threatModelExport";
+import { buildMarkdownReport, buildYamlExport } from "./threatModelExport";
 import type { AnalysisResult } from "@/lib/api/adapters";
+import type { CoverageWarning } from "@/lib/api/types";
 import type { Finding } from "@/types/ThreatModel";
 
 function finding(overrides: Partial<Finding> = {}): Finding {
@@ -22,7 +23,7 @@ function finding(overrides: Partial<Finding> = {}): Finding {
   } as Finding;
 }
 
-function result(findings: Finding[]): AnalysisResult {
+function result(findings: Finding[], warnings: CoverageWarning[] = []): AnalysisResult {
   return {
     analysisId: "a1",
     name: "Test",
@@ -31,9 +32,29 @@ function result(findings: Finding[]): AnalysisResult {
     nodes: [],
     edges: [],
     attacks: [],
+    warnings,
     solution: null,
   } as unknown as AnalysisResult;
 }
+
+const warnings: CoverageWarning[] = [
+  { kind: "not_expressible", rules: ["FH-015"], properties: [], message: "No adapter emits the interpretIntent verb." },
+  {
+    kind: "needs_declaration",
+    rules: ["FH-025"],
+    properties: ["boundary", "trust_level"],
+    message: "Declare `boundary: external` (or `trust_level: untrusted`) on the data asset being read.",
+  },
+  {
+    kind: "ignored_property",
+    rules: [],
+    properties: ["memroy"],
+    message: "`memroy` on agent 'Planner' is not a known property and was ignored; did you mean `memory`?",
+    node: "Planner",
+    node_type: "agent",
+    suggestion: "memory",
+  },
+];
 
 describe("buildYamlExport", () => {
   it("produces a parseable document with the analysis and findings", () => {
@@ -64,5 +85,29 @@ describe("buildYamlExport", () => {
   it("handles an empty findings list", () => {
     const parsed = parse(buildYamlExport("findings", result([])));
     expect(parsed.findings).toEqual([]);
+  });
+
+  it("carries the coverage warnings", () => {
+    const parsed = parse(buildYamlExport("findings", result([finding()], warnings)));
+    expect(parsed.warnings).toEqual(warnings);
+  });
+});
+
+describe("buildMarkdownReport", () => {
+  it("lists the rules out of reach and the ignored properties with the backend's explanation", () => {
+    const report = buildMarkdownReport(result([finding()], warnings), "findings");
+
+    expect(report).toContain("## Rule coverage");
+    expect(report).toContain("- **FH-015:** No adapter emits the interpretIntent verb.");
+    expect(report).toContain("- **FH-025:** Declare `boundary: external` (or `trust_level: untrusted`)");
+    expect(report).toContain("## Ignored properties\n\n- `memroy` on agent 'Planner'");
+    expect(report.indexOf("## Rule coverage")).toBeLessThan(report.indexOf("## Findings"));
+  });
+
+  it("leaves the coverage sections out when there are no warnings", () => {
+    const report = buildMarkdownReport(result([finding()]), "findings");
+
+    expect(report).not.toContain("## Rule coverage");
+    expect(report).not.toContain("## Ignored properties");
   });
 });

@@ -20,6 +20,7 @@ import {
   type AnalysisResult,
 } from "@/lib/api/adapters";
 import { ApiError } from "@/lib/api/client";
+import type { CoverageWarning } from "@/lib/api/types";
 import InlineError from "@/components/ui/InlineError";
 import { logger } from "@/lib/logger";
 import type { GraphEdge, GraphNode, WizardPhase } from "@/types/ThreatModel";
@@ -64,6 +65,8 @@ function NewThreatModelScreen() {
   // inferred capabilities for editing); the rule engine runs later in `analyze`.
   const [inferenceNodes, setInferenceNodes] = useState<GraphNode[]>([]);
   const [inferenceEdges, setInferenceEdges] = useState<GraphEdge[]>([]);
+  const [warnings, setWarnings] = useState<CoverageWarning[]>([]);
+  const [sourceFramework, setSourceFramework] = useState("generic");
   // `dirty`: the capabilities were edited since the last analysis.
   // `analyzed`: the analysis has run at least once for the current parse.
   const [dirty, setDirty] = useState(false);
@@ -98,6 +101,7 @@ function NewThreatModelScreen() {
     setReanalyzeError(null);
     setDirty(false);
     setAnalyzed(false);
+    setWarnings([]);
 
     // CrewAI ships two files (agents + tasks); the backend wants them as one
     // `agents:`/`tasks:` document, so merge before upload. Every other
@@ -119,6 +123,8 @@ function NewThreatModelScreen() {
       setAnalysisId(created.analysis_id);
       setInferenceNodes(toGraphNodes(graph.nodes));
       setInferenceEdges(toGraphEdges(graph.edges));
+      setWarnings(created.warnings);
+      setSourceFramework(created.source_framework);
       setRequestDone(true);
     } catch (err) {
       logger.error("Parse request failed", err);
@@ -153,6 +159,7 @@ function NewThreatModelScreen() {
       setResult({ ...base, solution: await loadSolution(base.analysisId, base) });
       setInferenceNodes(base.nodes);
       setInferenceEdges(base.edges);
+      setWarnings(base.warnings);
       setAnalyzed(true);
       setDirty(false);
       setPhase("results");
@@ -239,6 +246,8 @@ function NewThreatModelScreen() {
               <InferenceStep
                 nodes={inferenceNodes}
                 edges={inferenceEdges}
+                warnings={warnings}
+                framework={sourceFramework}
                 onNodesChange={(ns) => {
                   setInferenceNodes(ns);
                   setDirty(true);

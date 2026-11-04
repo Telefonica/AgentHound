@@ -13,17 +13,21 @@ import {
 } from "@telefonica/mistica";
 import AgentCapabilityCard from "@/components/threat-model/AgentCapabilityCard";
 import AgentEditModal from "@/components/threat-model/AgentEditModal";
+import CoverageWarnings from "@/components/threat-model/CoverageWarnings";
 import { groupByAgent } from "@/lib/agentCapabilities";
+import type { CoverageWarning } from "@/lib/api/types";
 import type { GraphEdge, GraphNode } from "@/types/ThreatModel";
 
 interface InferenceStepProps {
   nodes: GraphNode[];
   edges: GraphEdge[];
+  warnings: CoverageWarning[];
+  framework: string;
   onNodesChange: (nodes: GraphNode[]) => void;
   onEdgesChange: (edges: GraphEdge[]) => void;
 }
 
-function InferenceStep({ nodes, edges, onNodesChange, onEdgesChange }: InferenceStepProps) {
+function InferenceStep({ nodes, edges, warnings, framework, onNodesChange, onEdgesChange }: InferenceStepProps) {
   const t = useTranslations("inference");
   const { agents } = useMemo(() => groupByAgent(nodes, edges), [nodes, edges]);
   const [editingAgentId, setEditingAgentId] = useState<string | null>(null);
@@ -43,6 +47,8 @@ function InferenceStep({ nodes, edges, onNodesChange, onEdgesChange }: Inference
         description={t("calloutDesc")}
         asset={<IconInformationRegular color={skinVars.colors.brand} />}
       />
+
+      <CoverageWarnings warnings={warnings} framework={framework} />
 
       {agentCount === 0 ? (
         <EmptyState

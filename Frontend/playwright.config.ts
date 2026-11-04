@@ -19,6 +19,7 @@ export default defineConfig({
     baseURL: "http://localhost:3013",
     locale: "es-ES",
     timezoneId: "Europe/Madrid",
+    contextOptions: { reducedMotion: "reduce" },
     trace: "on-first-retry",
     screenshot: "only-on-failure",
   },
