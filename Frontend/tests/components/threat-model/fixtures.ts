@@ -43,5 +43,7 @@ export const result: AnalysisResult = {
   nodes,
   edges,
   attacks: [],
+  sourceFramework: "generic",
+  warnings: [],
   solution: null,
 };

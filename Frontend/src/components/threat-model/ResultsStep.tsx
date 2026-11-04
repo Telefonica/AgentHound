@@ -38,6 +38,7 @@ import {
   useTheme,
 } from "@telefonica/mistica";
 import type { IconProps } from "@telefonica/mistica";
+import CoverageWarnings from "@/components/threat-model/CoverageWarnings";
 import { FindingId, FindingRoute } from "@/components/threat-model/FindingIdentity";
 import SeverityBadge from "@/components/threat-model/SeverityBadge";
 import InlineError from "@/components/ui/InlineError";
@@ -285,6 +286,8 @@ function ResultsStep({ result, hideTitle = false }: ResultsStepProps) {
         <InlineError message={tCommon("error.description")} />
       ) : (
         <Stack space={32}>
+          {!solved && <CoverageWarnings warnings={result.warnings} framework={result.sourceFramework} />}
+
           <div ref={graphSectionRef} style={{ scrollMarginTop: 16, scrollMarginBottom: 16 }}>
             <Stack space={16}>
               <Stack space={4}>

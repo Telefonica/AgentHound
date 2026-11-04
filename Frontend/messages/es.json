@@ -235,6 +235,37 @@
     "isolateError": "No se pudo cargar la ruta de este hallazgo.",
     "chokepointTitle": "Punto de control recomendado",
     "chokepointDesc": "Aplica {control} en {node} — elimina el {pct}% del riesgo (coste: {cost})",
+    "coverage": {
+      "title": "Cobertura del formato",
+      "subtitle": "{count, plural, one {# regla} other {# reglas}} que el formato de este fichero no puede comprobar del todo",
+      "intro": "Los ficheros de framework no pueden expresar todas las reglas, así que un resultado limpio aquí es menos completo que uno del formato genérico.",
+      "notExpressibleTitle": "No alcanzables desde este formato",
+      "notExpressibleDesc": "El adaptador no puede producir lo que buscan estas reglas, diga lo que diga el fichero. Describe el sistema en el formato genérico para comprobarlas.",
+      "needsDeclarationTitle": "Se comprueban al declarar una propiedad",
+      "needsDeclarationDesc": "Añádela a la entrada del nodo en el fichero y vuelve a analizar.",
+      "needsDeclarationDescDify": "Añádela al bloque data del nodo en el fichero y vuelve a analizar.",
+      "declare": "Declara {what}",
+      "requirement": "{property}: {values} {node}",
+      "on": {
+        "agent": "en el agente",
+        "input": "en la entrada",
+        "tool": "en la herramienta",
+        "data_asset": "en el activo de datos",
+        "output": "en la salida",
+        "memory": "en el nodo de memoria",
+        "control": "en el control"
+      },
+      "role": {
+        "delegate": "en el agente al que delega otro agente",
+        "reachable": "en una herramienta que ese agente pueda alcanzar",
+        "read": "en el activo de datos que lee el agente",
+        "sent_to": "en la salida a la que envía el agente",
+        "shared": "en una memoria que use más de un agente"
+      },
+      "ignoredTitle": "Ignorado en tu fichero",
+      "ignoredSuggestion": "{property} en {node} no es una propiedad conocida y se ha ignorado. ¿Querías decir {suggestion}?",
+      "ignoredOther": "{property} en {node} pertenece a otro tipo de nodo y se ha ignorado."
+    },
     "metricsTitleFindings": "Métricas de riesgo",
     "metricsTitleSolution": "Métricas post-remediación",
     "before": "Antes",

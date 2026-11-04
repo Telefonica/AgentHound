@@ -50,7 +50,7 @@ adapter passes it through. In Dify, put it in the node's `data` block.
 | FH-012 | `capability_kinds: [deployRelease]` (or `moveResource`) | the tool |
 | FH-017 | `exposure_boundary: external` | the agent |
 | | `authentication_scope: elevated` | a tool that agent can reach |
-| FH-025 | `boundary: external` (or `trust_level: untrusted`) | the data asset being read |
+| FH-025 | `boundary: external` | the data asset being read |
 | FH-026 | `contains_regulated_data: [gdpr]` | the data asset |
 | FH-013 | `recipient_type: public_channel` (or `broadcast`) | the output |
 | FH-014 | `trust_level: trusted_core` | the agent named in `delegates_to` (CrewAI, LangGraph) |

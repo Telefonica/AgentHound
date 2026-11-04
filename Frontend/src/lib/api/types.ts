@@ -10,7 +10,8 @@
 /** A rule the uploaded file's framework can't reach, or only reaches once the
  * file declares a property (`catalogs/adapter_coverage.yaml`).
  * `not_expressible`: the adapter can't produce the shape the rule needs.
- * `needs_declaration`: `properties` lists the properties to declare.
+ * `needs_declaration`: `declare` says what to declare; `properties` lists the
+ * property names in it.
  * `ignored_property`: a key in the file that looks like a declaration (a typo,
  * or a property of another node type) was dropped; `rules` is empty.
  * Always empty for the generic format. `message` is English; build translated
@@ -20,11 +21,28 @@ export interface CoverageWarning {
   rules: string[];
   properties: string[];
   message: string;
+  /** `needs_declaration` only: alternative options, any one of which unlocks
+   * the rules; each is a list of requirements that must all hold. */
+  declare?: DeclarationRequirement[][];
   /** `ignored_property` only: the node the key was on. */
   node?: string;
   node_type?: string;
   /** `ignored_property` only: the property the key resembles, if any. */
   suggestion?: string | null;
+}
+
+/** One property to declare for a `needs_declaration` warning: on a node of
+ * `node_type`, set `property` to any one of `values` (for a list property,
+ * include one of them). */
+export interface DeclarationRequirement {
+  node_type: string;
+  /** Which node of that type, when not any: `delegate` (the agent another
+   * agent delegates to), `reachable` (a tool the option's agent can reach),
+   * `read` (the data asset the agent reads), `sent_to` (the output the agent
+   * sends to) or `shared` (memory more than one agent uses). */
+  role?: string;
+  property: string;
+  values: (string | boolean)[];
 }
 
 /** Summary block returned by `POST /analyses` (spec section 12.1). */
@@ -71,6 +89,8 @@ export interface CreateAnalysisResponse {
   status: string;
   /** Authoritative analysis name (the submitted name, or the YAML's metadata.name). */
   name: string;
+  /** Detected input format: `generic`, `crewai`, `dify` or `langgraph`. */
+  source_framework: string;
   summary: BackendSummary;
   warnings: CoverageWarning[];
 }
@@ -285,6 +305,7 @@ export interface AnalyzeResponse {
   analysis_id: string;
   status: string;
   name: string;
+  source_framework: string;
   summary: BackendSummary;
   graph: BackendGraph;
   findings: BackendFinding[];
