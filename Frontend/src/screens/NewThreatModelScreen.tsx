@@ -61,14 +61,19 @@ function ContainedStep({
         {heading}
       </Box>
       <Box paddingBottom={32}>
-        <Boxed width="100%">
-          <Box paddingX={32} paddingY={40}>
-            <Stack space={56}>
-              {stepper}
-              {children}
-            </Stack>
-          </Box>
-        </Boxed>
+        {/* From 1920px up the container stops growing at 1440px. The cap lives on a
+            plain wrapper: Mistica's own (unlayered) styles win over a utility class
+            set on Boxed itself. */}
+        <div className="w-full min-[1920px]:max-w-[1440px]">
+          <Boxed width="100%">
+            <Box paddingX={32} paddingY={40}>
+              <Stack space={56}>
+                {stepper}
+                {children}
+              </Stack>
+            </Box>
+          </Boxed>
+        </div>
       </Box>
       {footer}
     </div>

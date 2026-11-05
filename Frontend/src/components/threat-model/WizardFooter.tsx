@@ -23,7 +23,8 @@ function WizardFooter({ onPrevious, onNext, disablePrevious = false, disableNext
   const t = useTranslations("wizard");
   const resolvedNextLabel = nextLabel ?? t("next");
   return (
-    <div className="rounded-full mt-auto w-full" style={{ backgroundColor: skinVars.colors.backgroundContainer, borderColor: skinVars.colors.border, borderWidth: 1, borderStyle: "solid" }}>
+    // From 1920px up it stops at 1440px, the same cap as the wizard's container above it.
+    <div className="rounded-full mt-auto w-full min-[1920px]:max-w-[1440px]" style={{ backgroundColor: skinVars.colors.backgroundContainer, borderColor: skinVars.colors.border, borderWidth: 1, borderStyle: "solid" }}>
       <Box paddingX={32} paddingY={20}>
         <Inline space="between" alignItems="center">
           <ButtonSecondary onPress={() => onPrevious?.()} disabled={disablePrevious} StartIcon={IconArrowLineLeftLight}>
