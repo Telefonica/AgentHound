@@ -2,13 +2,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Box, Boxed, Stack, Text8, skinVars } from "@telefonica/mistica";
+import { Box, Boxed, Inline, Stack, Text8, skinVars } from "@telefonica/mistica";
 import ConfigurationStep from "@/components/threat-model/ConfigurationStep";
 import ProcessingStep from "@/components/threat-model/ProcessingStep";
 import InferenceStep from "@/components/threat-model/InferenceStep";
 import ResultsStep from "@/components/threat-model/ResultsStep";
 import WizardFooter from "@/components/threat-model/WizardFooter";
 import WizardStepper from "@/components/threat-model/WizardStepper";
+import RenameTestButton from "@/components/threat-model/RenameTestButton";
 import { PROVIDERS, YAML_COUNT } from "@/lib/threatModelData";
 import { buildCrewaiUpload } from "@/lib/crewai";
 import { analyze, createAnalysis, getGraph } from "@/lib/api/agentHound";
@@ -235,11 +236,20 @@ function NewThreatModelScreen() {
 
   const stepper = <WizardStepper steps={stepLabels} currentStep={STEP_INDEX[phase]} aria-label={tWizard("progressLabel")} />;
 
-  const heading = (
+  const title = (
     <Text8 as="h1" color={skinVars.colors.neutralHigh}>
       {name.trim() || tWizard("untitled")}
     </Text8>
   );
+  // From the Analysis step on (steps 2 and 3) the test already exists, so the
+  // title gets a pencil that opens the rename dialog.
+  const editableHeading = (
+    <Inline space={16} alignItems="center" expand={1}>
+      {title}
+      <RenameTestButton name={name} onRename={setName} />
+    </Inline>
+  );
+  const heading = phase === "processing" || phase === "inference" ? editableHeading : title;
 
   return (
     <div ref={rootRef} style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>

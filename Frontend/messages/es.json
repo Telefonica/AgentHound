@@ -77,6 +77,15 @@
     "next": "Siguiente",
     "untitled": "Nueva prueba",
     "progressLabel": "Progreso de creación de la prueba",
+    "rename": {
+      "editLabel": "Editar el nombre de la prueba",
+      "title": "Ponle nombre a tu prueba",
+      "description": "Estás a punto de crear una nueva prueba. Mientras la configuras, solo tú puedes verla y cambiar el nombre.",
+      "fieldLabel": "nombre de la prueba*",
+      "update": "Actualizar",
+      "cancel": "Cancelar",
+      "close": "Cerrar el cuadro de nombre"
+    },
     "steps": {
       "configuration": "Configuración",
       "analysis": "Análisis",

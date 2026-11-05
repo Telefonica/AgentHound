@@ -77,6 +77,15 @@
     "next": "Next",
     "untitled": "New test",
     "progressLabel": "Test creation progress",
+    "rename": {
+      "editLabel": "Edit test name",
+      "title": "Name your test",
+      "description": "You're about to create a new test. While you configure it, only you can see it and change the name.",
+      "fieldLabel": "test name*",
+      "update": "Update",
+      "cancel": "Cancel",
+      "close": "Close rename dialog"
+    },
     "steps": {
       "configuration": "Configuration",
       "analysis": "Analysis",
