@@ -295,38 +295,44 @@ function NewThreatModelScreen() {
             onComplete={markProcessingComplete}
           />
         </ContainedStep>
+      ) : phase === "inference" ? (
+        <ContainedStep
+          heading={heading}
+          stepper={stepper}
+          footer={
+            <WizardFooter
+              onPrevious={handlePrevious}
+              onNext={handleNext}
+              nextLabel={tInference("viewResults")}
+              disableNext={reanalyzing}
+              isNextLoading={reanalyzing}
+            />
+          }
+        >
+          <Stack space={24}>
+            <InferenceStep
+              nodes={inferenceNodes}
+              edges={inferenceEdges}
+              onNodesChange={(ns) => {
+                setInferenceNodes(ns);
+                setDirty(true);
+              }}
+              onEdgesChange={(es) => {
+                setInferenceEdges(es);
+                setDirty(true);
+              }}
+            />
+            {reanalyzeError && <InlineError message={reanalyzeError} />}
+          </Stack>
+        </ContainedStep>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, paddingTop: 24, paddingLeft: 32, paddingRight: 32, paddingBottom: 32, gap: 32 }}>
           {heading}
           {stepper}
 
-          {phase === "inference" && (
-            <>
-              <InferenceStep
-                nodes={inferenceNodes}
-                edges={inferenceEdges}
-                onNodesChange={(ns) => {
-                  setInferenceNodes(ns);
-                  setDirty(true);
-                }}
-                onEdgesChange={(es) => {
-                  setInferenceEdges(es);
-                  setDirty(true);
-                }}
-              />
-              {reanalyzeError && <InlineError message={reanalyzeError} />}
-            </>
-          )}
-          {phase === "results" && <ResultsStep result={result} hideTitle />}
+          <ResultsStep result={result} hideTitle />
 
-          <WizardFooter
-            onPrevious={handlePrevious}
-            onNext={handleNext}
-            hideNext={phase === "results"}
-            nextLabel={phase === "inference" ? tInference("viewResults") : undefined}
-            disableNext={phase === "inference" && reanalyzing}
-            isNextLoading={phase === "inference" && reanalyzing}
-          />
+          <WizardFooter onPrevious={handlePrevious} onNext={handleNext} hideNext />
         </div>
       )}
     </div>

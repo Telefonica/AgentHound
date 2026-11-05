@@ -7,8 +7,8 @@ import {
   IconInformationRegular,
   IconRobotRegular,
   Stack,
-  Text1,
-  Text4,
+  Text3,
+  Text5,
   skinVars,
 } from "@telefonica/mistica";
 import AgentCapabilityCard from "@/components/threat-model/AgentCapabilityCard";
@@ -33,34 +33,37 @@ function InferenceStep({ nodes, edges, onNodesChange, onEdgesChange }: Inference
 
   return (
     <Stack space={24}>
-      <Stack space={4}>
-        <Text4 medium as="h1">{t("heading")}</Text4>
-        <Text1 regular color={skinVars.colors.textSecondary}>{t("subtitle")}</Text1>
+      {/* Same section header as the other steps: Text5 title, Text3 paragraph, 8 apart. */}
+      <Stack space={8}>
+        <Text5 as="h2">{t("heading")}</Text5>
+        <Text3 regular as="p" color={skinVars.colors.textSecondary}>{t("subtitle")}</Text3>
       </Stack>
 
-      <Callout
-        title={t("calloutTitle")}
-        description={t("calloutDesc")}
-        asset={<IconInformationRegular color={skinVars.colors.brand} />}
-      />
-
-      {agentCount === 0 ? (
-        <EmptyState
-          asset={<IconRobotRegular size={32} color={skinVars.colors.brand} />}
-          title={t("emptyTitle")}
-          description={t("emptyDesc")}
+      <Stack space={16}>
+        <Callout
+          title={t("calloutTitle")}
+          description={t("calloutDesc")}
+          asset={<IconInformationRegular color={skinVars.colors.brand} />}
         />
-      ) : (
-        <Grid columns={{ minSize: 320 }} gap={16}>
-          {agents.map((group) => (
-            <AgentCapabilityCard
-              key={group.agent.id}
-              group={group}
-              onEditAgent={setEditingAgentId}
-            />
-          ))}
-        </Grid>
-      )}
+
+        {agentCount === 0 ? (
+          <EmptyState
+            asset={<IconRobotRegular size={32} color={skinVars.colors.brand} />}
+            title={t("emptyTitle")}
+            description={t("emptyDesc")}
+          />
+        ) : (
+          <Grid columns={{ minSize: 320 }} gap={16}>
+            {agents.map((group) => (
+              <AgentCapabilityCard
+                key={group.agent.id}
+                group={group}
+                onEditAgent={setEditingAgentId}
+              />
+            ))}
+          </Grid>
+        )}
+      </Stack>
 
       {isEditing && editingAgentId && (
         <AgentEditModal
