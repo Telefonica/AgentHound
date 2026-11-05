@@ -530,7 +530,7 @@ function ResultsStep({ result, hideTitle = false, stepTitle }: ResultsStepProps)
                     key={cls}
                     title={cls === "attack" ? t("attackFindingsTitle") : t("hygieneTitle")}
                     subtitle={t("findingPatternsCount", { count: patterns.length })}
-                    right={<Tag type="inactive" small>{`${items.length}`}</Tag>}
+                    right={<Align y="center" height="100%"><Tag type="inactive" small>{`${items.length}`}</Tag></Align>}
                     content={
                       <Stack space={12}>
                         {patterns.map((pattern) => {
@@ -570,7 +570,7 @@ function ResultsStep({ result, hideTitle = false, stepTitle }: ResultsStepProps)
                     <BoxedAccordionItem
                       key="controls"
                       title={t("controlsTitle")}
-                      right={<Tag type="active" small>{`${sol.remediation.length}`}</Tag>}
+                      right={<Align y="center" height="100%"><Tag type="active" small>{`${sol.remediation.length}`}</Tag></Align>}
                       content={
                         <Timeline>
                           {sol.remediation.map((step) => (
@@ -594,7 +594,7 @@ function ResultsStep({ result, hideTitle = false, stepTitle }: ResultsStepProps)
                   <BoxedAccordionItem
                     key="resolved"
                     title={t("resolved")}
-                    right={<Tag type="success" small>{`${resolvedFindings.length}`}</Tag>}
+                    right={<Align y="center" height="100%"><Tag type="success" small>{`${resolvedFindings.length}`}</Tag></Align>}
                     content={
                       <Stack space={8}>
                         {resolvedFindings.map((f) => (
