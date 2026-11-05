@@ -8,7 +8,6 @@ import {
   cyber,
   DATA_SAFE_ACCENT,
   DATA_SAFE_ACCENT_RAW,
-  DATA_SAFE_GLOW,
   NODE_STYLE,
   nodeSize,
 } from "@/components/threat-model/graph/cyberGraphTheme";
@@ -89,29 +88,28 @@ function accentFor(node: CyberNode["data"]) {
     const props = gnode.properties ?? {};
     const risky = gnode.risk === "high" || props.sensitivity === "high" || props.sensitivity === "critical" || props.contains_pii === true;
     return risky
-      ? { accent: base.accent, accentRaw: base.accentRaw, glow: base.glow }
-      : { accent: DATA_SAFE_ACCENT, accentRaw: DATA_SAFE_ACCENT_RAW, glow: DATA_SAFE_GLOW };
+      ? { accent: base.accent, accentRaw: base.accentRaw }
+      : { accent: DATA_SAFE_ACCENT, accentRaw: DATA_SAFE_ACCENT_RAW };
   }
-  return { accent: base.accent, accentRaw: base.accentRaw, glow: base.glow };
+  return { accent: base.accent, accentRaw: base.accentRaw };
 }
 
 const CyberNodeView = memo(({ data, selected }: NodeProps<CyberNode>) => {
   const { gnode } = data;
   const style = NODE_STYLE[gnode.type];
-  const { accent, accentRaw, glow } = accentFor(data);
+  const { accent, accentRaw } = accentFor(data);
   const label = gnode.label.replace(/\n/g, " ");
 
-  // The agent is the hero "reactor core": larger, with a rotating conic-gradient
-  // border, a breathing halo and an "online" pulse — so the eye lands on it first.
+  // The agent is the hero node: larger than the rest, so the eye lands on it first.
   const isAgent = gnode.type === "agent";
   const { w, h } = nodeSize(gnode.type);
   const iconBox = isAgent ? 68 : 56;
 
-  // Every node keeps its own accent glow, in both the findings and solution
-  // views — a shared green/red halo per attacked node was dropped because it
-  // camouflaged the node's own colour. "Protected" is conveyed separately by
-  // the padlock badge below, not by recolouring the node's halo.
-  const ring = `0 0 14px 0 ${glow}`;
+  // Every node is outlined with a flat 2px border in its own accent colour, in
+  // both the findings and solution views — no coloured glow or shadow. A shared
+  // green/red halo per attacked node was dropped because it camouflaged the
+  // node's own colour. "Protected" is conveyed separately by the padlock badge
+  // below, not by recolouring the node's border.
 
   const contentLayer: React.CSSProperties = { position: "relative", zIndex: 1 };
 
@@ -131,24 +129,16 @@ const CyberNodeView = memo(({ data, selected }: NodeProps<CyberNode>) => {
         gap: isAgent ? 11 : 13,
         padding: isAgent ? "16px 8px" : "12px 15px",
         borderRadius: style.radius,
-        border: `1.5px solid ${isAgent ? "transparent" : accent}`,
+        border: `2px solid ${accent}`,
         background: cyber.cardBg,
-        boxShadow: selected ? `0 0 0 2px ${accent}, 0 0 26px 3px ${glow}` : ring,
+        // Selection adds a flat outer ring in the same colour (no blur).
+        boxShadow: selected ? `0 0 0 2px ${accent}` : "none",
         color: cyber.textPrimary,
         cursor: "pointer",
         position: "relative",
         transition: "box-shadow .2s ease, transform .2s ease",
-        // exposes the accent to the reactor CSS layers (conic border, halo, dot)
-        ...(isAgent ? ({ "--ch-accent": accent, "--ch-glow": glow } as React.CSSProperties) : {}),
       }}
     >
-      {isAgent && (
-        <>
-          {/* breathing outer halo + rotating conic-gradient border */}
-          <span className="ch-reactor-halo" aria-hidden style={{ borderRadius: style.radius }} />
-          <span className="ch-reactor-ring" aria-hidden style={{ borderRadius: style.radius }} />
-        </>
-      )}
       {data.findingMark && <NodeFindingCorner mark={data.findingMark} />}
       <Handle type="target" position={Position.Left} style={{ background: accent, width: 9, height: 9, border: "none", zIndex: 2 }} />
       <div

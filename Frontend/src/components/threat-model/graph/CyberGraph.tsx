@@ -794,34 +794,8 @@ const CYBER_CSS = `
 .ch-controls button:hover { background: ${cyber.surfaceHover}; }
 .ch-controls button svg { fill: ${cyber.textPrimary}; }
 
-/* ---- agent "reactor core" hero node -------------------------------------- */
-@property --ch-angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+/* ---- agent hero node ------------------------------------------------------ */
 .ch-reactor:hover { transform: translateY(-1px); }
-/* breathing outer halo (box-shadow spreads beyond the card) */
-.ch-reactor-halo {
-  position: absolute; inset: 0; pointer-events: none; z-index: 0;
-  animation: chReactorHalo 2.6s ease-in-out infinite;
-}
-@keyframes chReactorHalo {
-  0%, 100% { box-shadow: 0 0 16px 1px var(--ch-glow); }
-  50%      { box-shadow: 0 0 32px 7px var(--ch-glow); }
-}
-/* rotating conic-gradient border, masked to a 2px frame */
-.ch-reactor-ring {
-  position: absolute; inset: 0; pointer-events: none; z-index: 0; padding: 2px;
-  background: conic-gradient(from var(--ch-angle),
-    transparent 0deg, var(--ch-accent) 70deg, #ffffff 118deg,
-    var(--ch-accent) 166deg, transparent 250deg, transparent 360deg);
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-          mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-          mask-composite: exclude;
-  animation: chReactorSpin 4.2s linear infinite;
-}
-@keyframes chReactorSpin { to { --ch-angle: 360deg; } }
-@media (prefers-reduced-motion: reduce) {
-  .ch-reactor-ring, .ch-reactor-halo { animation: none; }
-}
 
 /* ---- padlock tooltip (recommended controls) ------------------------------ */
 /* raise the hovered node/label so its tooltip is not covered by later ones */
