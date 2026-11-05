@@ -171,8 +171,13 @@
         "totalTests": "Tests analyzed",
         "totalFindings": "Total findings",
         "totalCritical": "Critical findings",
-        "criticalRate": "Tests with criticals",
+        "criticalRate": "Critical tests",
         "avgMaxScore": "Avg. max score"
+      },
+      "kpiInfoLabel": "More information about {name}",
+      "kpiInfo": {
+        "criticalRate": "Percentage of tests with critical findings",
+        "avgMaxScore": "Average of the highest risk score found in each analyzed test"
       },
       "back": "Back to results",
       "worstTitle": "Highest-risk tests",

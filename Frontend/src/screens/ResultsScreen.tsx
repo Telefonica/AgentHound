@@ -97,6 +97,7 @@ export default function ResultsScreen() {
       color: criticalColor,
       Icon: IconChemistryFilled,
       iconColor: criticalColor,
+      info: true,
     },
     {
       key: "totalFindings",
@@ -118,6 +119,7 @@ export default function ResultsScreen() {
       color: skinVars.colors.neutralHigh,
       Icon: IconPodiumRegular,
       iconColor: skinVars.colors.brand,
+      info: true,
     },
   ] as const;
 
@@ -135,6 +137,14 @@ export default function ResultsScreen() {
           title={t(`kpis.${kpi.key}`)}
           value={kpi.value}
           unit={"unit" in kpi ? kpi.unit : undefined}
+          info={
+            "info" in kpi
+              ? {
+                  label: t("kpiInfoLabel", { name: t(`kpis.${kpi.key}`) }),
+                  description: t(`kpiInfo.${kpi.key}`),
+                }
+              : undefined
+          }
           valueColor={kpi.color}
         />
       ))}

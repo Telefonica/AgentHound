@@ -171,8 +171,13 @@
         "totalTests": "Pruebas analizadas",
         "totalFindings": "Hallazgos totales",
         "totalCritical": "Hallazgos críticos",
-        "criticalRate": "Pruebas con críticos",
+        "criticalRate": "Pruebas críticas",
         "avgMaxScore": "Puntuación máx. media"
+      },
+      "kpiInfoLabel": "Más información sobre {name}",
+      "kpiInfo": {
+        "criticalRate": "Porcentaje de pruebas con hallazgos críticos",
+        "avgMaxScore": "Media de la puntuación de riesgo más alta de cada prueba analizada"
       },
       "back": "Volver a resultados",
       "worstTitle": "Pruebas de mayor riesgo",
