@@ -44,7 +44,7 @@
   "overview": {
     "title": "Overview",
     "description": "Test your AI Agent architecture and detect dangerous capability paths before attackers do.",
-    "newThreatModel": "New test",
+    "newThreatModel": "Create new test",
     "kpis": {
       "totalModels": "Total tests",
       "critical": "Critical or high risk tests",

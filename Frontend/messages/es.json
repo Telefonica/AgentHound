@@ -44,7 +44,7 @@
   "overview": {
     "title": "Resumen",
     "description": "Prueba la arquitectura de tu agente de IA y detecta rutas de capacidad peligrosas antes que los atacantes.",
-    "newThreatModel": "Nueva prueba",
+    "newThreatModel": "Crear nueva prueba",
     "kpis": {
       "totalModels": "Pruebas totales",
       "critical": "Pruebas de riesgo crítico o alto",
