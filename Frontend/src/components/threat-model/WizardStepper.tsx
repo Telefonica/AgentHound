@@ -24,7 +24,7 @@ function centerOf(index: number, count: number): string {
 /**
  * Numbered wizard stepper: one circle per step joined by lines, with the step
  * name underneath. The first and last steps sit on the edges, the rest are
- * spread evenly in between. Done steps show a check, the current one is filled.
+ * spread evenly in between. Done steps are outlined in brand colour with a check, the current one is filled.
  */
 function WizardStepper({ steps, currentStep, "aria-label": ariaLabel }: WizardStepperProps) {
   const count = steps.length;
@@ -58,7 +58,6 @@ function WizardStepper({ steps, currentStep, "aria-label": ariaLabel }: WizardSt
         const number = i + 1;
         const isCurrent = number === currentStep;
         const isDone = number < currentStep;
-        const filled = isCurrent || isDone;
         const align = i === 0 ? "flex-start" : i === count - 1 ? "flex-end" : "center";
         const shift = i === 0 ? "0" : i === count - 1 ? "-100%" : "-50%";
         return (
@@ -87,12 +86,13 @@ function WizardStepper({ steps, currentStep, "aria-label": ariaLabel }: WizardSt
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                backgroundColor: filled ? skinVars.colors.brand : "transparent",
-                border: filled ? "none" : `2px solid ${skinVars.colors.borderHigh}`,
+                // current: solid brand; done: brand outline with a check; upcoming: grey outline
+                backgroundColor: isCurrent ? skinVars.colors.brand : "transparent",
+                border: isCurrent ? "none" : `2px solid ${isDone ? skinVars.colors.brand : skinVars.colors.borderHigh}`,
               }}
             >
               {isDone ? (
-                <IconCheckRegular size={20} color={skinVars.colors.textPrimaryInverse} />
+                <IconCheckRegular size={20} color={skinVars.colors.brand} />
               ) : (
                 <Text2 regular color={isCurrent ? skinVars.colors.textPrimaryInverse : skinVars.colors.textSecondary}>
                   {number}

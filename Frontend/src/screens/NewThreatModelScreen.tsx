@@ -1,8 +1,8 @@
 "use client";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Text8, skinVars } from "@telefonica/mistica";
+import { Box, Boxed, Stack, Text8, skinVars } from "@telefonica/mistica";
 import ConfigurationStep from "@/components/threat-model/ConfigurationStep";
 import ProcessingStep from "@/components/threat-model/ProcessingStep";
 import InferenceStep from "@/components/threat-model/InferenceStep";
@@ -36,6 +36,42 @@ const STEP_INDEX: Record<WizardPhase, number> = {
 // generic (nodes/edges) format. Anything else (e.g. n8n) is sent without a hint
 // so the backend falls back to auto-detection.
 const BACKEND_FRAMEWORKS = new Set(["crewai", "dify", "langgraph", "generic"]);
+
+/**
+ * Frame shared by the steps that live inside a single container (Configuration
+ * and Analysis): the title (48 above, 40 below), then one container that holds
+ * the stepper and the step content, with the footer pinned underneath.
+ */
+function ContainedStep({
+  heading,
+  stepper,
+  footer,
+  children,
+}: {
+  heading: ReactNode;
+  stepper: ReactNode;
+  footer: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, paddingLeft: 32, paddingRight: 32, paddingBottom: 32 }}>
+      <Box paddingTop={48} paddingBottom={40}>
+        {heading}
+      </Box>
+      <Box paddingBottom={32}>
+        <Boxed width="100%">
+          <Box paddingX={32} paddingY={40}>
+            <Stack space={56}>
+              {stepper}
+              {children}
+            </Stack>
+          </Box>
+        </Boxed>
+      </Box>
+      {footer}
+    </div>
+  );
+}
 
 function NewThreatModelScreen() {
   const router = useRouter();
@@ -197,6 +233,8 @@ function NewThreatModelScreen() {
     else close();
   };
 
+  const stepper = <WizardStepper steps={stepLabels} currentStep={STEP_INDEX[phase]} aria-label={tWizard("progressLabel")} />;
+
   const heading = (
     <Text8 as="h1" color={skinVars.colors.neutralHigh}>
       {name.trim() || tWizard("untitled")}
@@ -205,41 +243,53 @@ function NewThreatModelScreen() {
 
   return (
     <div ref={rootRef} style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
-      {phase === "processing" ? (
-        <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, paddingTop: 32, paddingLeft: 32, paddingRight: 32, paddingBottom: 32, gap: 24 }}>
-          {/* Processing is its own step (Analyzing), between Configuration and the
-              Agents step, so the stepper and footer stay visible like any step. */}
-          {heading}
-          <WizardStepper steps={stepLabels} currentStep={STEP_INDEX[phase]} aria-label={tWizard("progressLabel")} />
+      {phase === "configuration" ? (
+        <ContainedStep
+          heading={heading}
+          stepper={stepper}
+          footer={
+            <WizardFooter
+              onPrevious={handlePrevious}
+              onNext={handleNext}
+              nextLabel={tConfiguration("analyzeButton")}
+              disableNext={!name.trim() || files.length === 0}
+            />
+          }
+        >
+          <ConfigurationStep
+            name={name}
+            onNameChange={setName}
+            provider={provider}
+            onProviderChange={setProvider}
+            showValidation={showValidation}
+            onFilesChange={setFilesByField}
+          />
+        </ContainedStep>
+      ) : phase === "processing" ? (
+        <ContainedStep
+          heading={heading}
+          stepper={stepper}
+          footer={
+            <WizardFooter
+              onPrevious={handlePrevious}
+              onNext={handleNext}
+              disableNext={!processingComplete}
+              isNextLoading={!processingComplete && !analysisError}
+            />
+          }
+        >
           <ProcessingStep
             requestDone={requestDone}
             error={analysisError}
             onRetry={() => void parseArchitecture()}
-            counts={result?.counts ?? null}
             onComplete={markProcessingComplete}
           />
-          <WizardFooter
-            onPrevious={handlePrevious}
-            onNext={handleNext}
-            disableNext={!processingComplete}
-            isNextLoading={!processingComplete && !analysisError}
-          />
-        </div>
+        </ContainedStep>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, paddingTop: 24, paddingLeft: 32, paddingRight: 32, paddingBottom: 32, gap: 32 }}>
           {heading}
-          <WizardStepper steps={stepLabels} currentStep={STEP_INDEX[phase]} aria-label={tWizard("progressLabel")} />
+          {stepper}
 
-          {phase === "configuration" && (
-            <ConfigurationStep
-              name={name}
-              onNameChange={setName}
-              provider={provider}
-              onProviderChange={setProvider}
-              showValidation={showValidation}
-              onFilesChange={setFilesByField}
-            />
-          )}
           {phase === "inference" && (
             <>
               <InferenceStep
@@ -263,11 +313,8 @@ function NewThreatModelScreen() {
             onPrevious={handlePrevious}
             onNext={handleNext}
             hideNext={phase === "results"}
-            nextLabel={phase === "configuration" ? tConfiguration("analyzeButton") : phase === "inference" ? tInference("viewResults") : undefined}
-            disableNext={
-              (phase === "configuration" && (!name.trim() || files.length === 0)) ||
-              (phase === "inference" && reanalyzing)
-            }
+            nextLabel={phase === "inference" ? tInference("viewResults") : undefined}
+            disableNext={phase === "inference" && reanalyzing}
             isNextLoading={phase === "inference" && reanalyzing}
           />
         </div>

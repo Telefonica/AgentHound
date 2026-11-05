@@ -8,11 +8,12 @@ import {
   Select,
   Stack,
   Text1,
+  Text3,
+  Text5,
   TextField,
   skinVars,
 } from "@telefonica/mistica";
 import FileBox from "@/components/ui/FileBox";
-import SectionBlock from "@/components/threat-model/SectionBlock";
 import { PROVIDERS, YAML_COUNT } from "@/lib/threatModelData";
 
 /**
@@ -129,9 +130,20 @@ function ConfigurationStep({
 
   const showFilesError = showValidation && uploadFields.every((f) => (filesByField[f.key] ?? []).length === 0);
 
+  // The step renders straight onto the wizard's container (the screen wraps the
+  // stepper and this content in a single Boxed), so there are no inner boxes.
+  // Spacing follows the design: 8 between title and paragraph, 40 down to the
+  // fields, 32 between the fields and the upload zones.
   return (
-    <Stack space={24}>
-      <SectionBlock title={t("heading")} subtitle={t("subtitle")}>
+    <Stack space={40}>
+      <Stack space={8}>
+        <Text5 as="h2">{t("heading")}</Text5>
+        <Text3 regular as="p" color={skinVars.colors.textSecondary}>
+          {t("subtitle")}
+        </Text3>
+      </Stack>
+
+      <Stack space={32}>
         <DoubleField layout="50/50" fullWidth>
           <TextField
             name="threat-model-name"
@@ -152,9 +164,7 @@ function ConfigurationStep({
             fullWidth
           />
         </DoubleField>
-      </SectionBlock>
 
-      <SectionBlock>
         <Stack space={12}>
           <div style={{ display: "flex", gap: 24, alignItems: "stretch" }}>
             {uploadFields.map((field) => {
@@ -188,7 +198,7 @@ function ConfigurationStep({
             </Text1>
           )}
         </Stack>
-      </SectionBlock>
+      </Stack>
     </Stack>
   );
 }

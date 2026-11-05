@@ -15,7 +15,7 @@ import {
   Text1,
   Text2,
   Text3,
-  Text4,
+  Text5,
   Text6,
   skinVars,
 } from "@telefonica/mistica";
@@ -38,12 +38,10 @@ interface ProcessingStepProps {
   error: string | null;
   /** Re-run the analysis after a failure. */
   onRetry: () => void;
-  /** Real analysis counts, available once the request resolves; used for the completion subtitle. */
-  counts: { findings: number; critical: number; maxScore: number; agents: number } | null;
   onComplete?: () => void;
 }
 
-function ProcessingStep({ requestDone, error, onRetry, counts, onComplete }: ProcessingStepProps) {
+function ProcessingStep({ requestDone, error, onRetry, onComplete }: ProcessingStepProps) {
   const t = useTranslations("processing");
   const tCommon = useTranslations("common");
   const [index, setIndex] = useState(1);
@@ -85,25 +83,18 @@ function ProcessingStep({ requestDone, error, onRetry, counts, onComplete }: Pro
     onRetry();
   };
 
+  // Rendered inside the wizard's container. Spacing follows the design: 8 between
+  // title and paragraph, 24 down to the progress card, 32 to the reasoning log.
   return (
-    <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, gap: 24 }}>
-      <Stack space={12}>
-        <Inline space={12} alignItems="center">
-          {!error &&
-            (complete ? (
-              <IconCheckFilled size={22} color={skinVars.colors.brand} />
-            ) : (
-              <Spinner size={22} color={skinVars.colors.brand} />
-            ))}
-          <Text4 medium as="h1">
+    <Stack space={32}>
+      <Stack space={24}>
+        <Stack space={8}>
+          <Text5 as="h2">{t("heading")}</Text5>
+          <Text3 regular as="p" color={skinVars.colors.textSecondary}>
             {error ? t("errorTitle") : complete ? t("doneTitle") : t("title")}
-          </Text4>
-        </Inline>
-        {complete && counts && (
-          <Text2 regular color={skinVars.colors.textSecondary}>
-            {t("doneDesc", counts)}
-          </Text2>
-        )}
+          </Text3>
+        </Stack>
+
         {error && (
           <Callout
             variant="default"
@@ -117,65 +108,61 @@ function ProcessingStep({ requestDone, error, onRetry, counts, onComplete }: Pro
             }
           />
         )}
+
+        <Boxed>
+          <Box paddingX={32} paddingY={32}>
+            <Stack space={12}>
+              <Stack space={40}>
+                <Inline space={16} alignItems="center">
+                  <IconRocketRegular size={24} color={skinVars.colors.brand} />
+                  <Text3 regular>{t("progressLabel")}</Text3>
+                </Inline>
+                <Stack space={24}>
+                  <Inline space="between" alignItems="center">
+                    <Text2 regular color={skinVars.colors.textSecondary}>
+                      {t("subtitle")}
+                    </Text2>
+                    <Text1 regular color={skinVars.colors.textSecondary}>
+                      {t("elapsedTime", { time: formatElapsed(elapsedMs) })}
+                    </Text1>
+                  </Inline>
+                  <ProgressBar progressPercent={percent} />
+                </Stack>
+              </Stack>
+              <Text6>{percent}%</Text6>
+            </Stack>
+          </Box>
+        </Boxed>
       </Stack>
 
       <Boxed>
-        <Box paddingX={32} paddingY={32}>
-          <Stack space={12}>
-            <Stack space={40}>
-              <Inline space={16} alignItems="center">
-                <IconRocketRegular size={24} color={skinVars.colors.brand} />
-                <Text3 regular>{t("progressLabel")}</Text3>
-              </Inline>
-              <Stack space={24}>
-                <Inline space="between" alignItems="center">
-                  <Text2 regular color={skinVars.colors.textSecondary}>
-                    {t("subtitle")}
-                  </Text2>
-                  <Text1 regular color={skinVars.colors.textSecondary}>
-                    {t("elapsedTime", { time: formatElapsed(elapsedMs) })}
+        <Box paddingX={20} paddingY={20}>
+          <Stack space={8}>
+            {REASONING.slice(0, index).map((line, i) => {
+              const isActive = i === index - 1 && !complete;
+              const isFinal = complete && i === REASONING.length - 1;
+              const lineColor = isActive || isFinal ? skinVars.colors.textPrimary : skinVars.colors.textSecondary;
+              return (
+                <Inline key={line} space={8} alignItems="center">
+                  {isActive ? (
+                    <Spinner size={14} color={skinVars.colors.brand} />
+                  ) : isFinal ? (
+                    <IconCheckFilled size={14} color={skinVars.colors.brand} />
+                  ) : (
+                    <Box width={14}>
+                      <Text1 regular color={lineColor} textAlign="center">–</Text1>
+                    </Box>
+                  )}
+                  <Text1 regular color={lineColor}>
+                    {line}
                   </Text1>
                 </Inline>
-                <ProgressBar progressPercent={percent} />
-              </Stack>
-            </Stack>
-            <Text6>{percent}%</Text6>
+              );
+            })}
           </Stack>
         </Box>
       </Boxed>
-
-      <div style={{ flex: 1, minHeight: 0 }}>
-        <Boxed height="100%">
-          <div style={{ height: "100%", overflowY: "auto" }}>
-            <Box paddingX={20} paddingY={20}>
-              <Stack space={4}>
-                {REASONING.slice(0, index).map((line, i) => {
-                  const isActive = i === index - 1 && !complete;
-                  const isFinal = complete && i === REASONING.length - 1;
-                  const lineColor = isActive || isFinal ? skinVars.colors.textPrimary : skinVars.colors.textSecondary;
-                  return (
-                    <Inline key={line} space={8} alignItems="center">
-                      {isActive ? (
-                        <Spinner size={14} color={skinVars.colors.brand} />
-                      ) : isFinal ? (
-                        <IconCheckFilled size={14} color={skinVars.colors.brand} />
-                      ) : (
-                        <Box width={14}>
-                          <Text1 regular color={lineColor} textAlign="center">–</Text1>
-                        </Box>
-                      )}
-                      <Text1 regular color={lineColor}>
-                        {line}
-                      </Text1>
-                    </Inline>
-                  );
-                })}
-              </Stack>
-            </Box>
-          </div>
-        </Boxed>
-      </div>
-    </div>
+    </Stack>
   );
 }
 
