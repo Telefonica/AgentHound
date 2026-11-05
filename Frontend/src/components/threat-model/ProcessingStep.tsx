@@ -84,33 +84,34 @@ function ProcessingStep({ requestDone, error, onRetry, onComplete }: ProcessingS
   };
 
   // Rendered inside the wizard's container. Spacing follows the design: 8 between
-  // title and paragraph, 24 down to the progress card, 32 to the reasoning log.
+  // title and paragraph, 24 down to the progress card. The card holds both the
+  // progress summary and the reasoning log, 32 apart.
   return (
-    <Stack space={32}>
-      <Stack space={24}>
-        <Stack space={8}>
-          <Text5 as="h2">{t("heading")}</Text5>
-          <Text3 regular as="p" color={skinVars.colors.textSecondary}>
-            {error ? t("errorTitle") : complete ? t("doneTitle") : t("title")}
-          </Text3>
-        </Stack>
+    <Stack space={24}>
+      <Stack space={8}>
+        <Text5 as="h2">{t("heading")}</Text5>
+        <Text3 regular as="p" color={skinVars.colors.textSecondary}>
+          {error ? t("errorTitle") : complete ? t("doneTitle") : t("title")}
+        </Text3>
+      </Stack>
 
-        {error && (
-          <Callout
-            variant="default"
-            title={t("errorTitle")}
-            description={error}
-            asset={<IconAlertFilled color={skinVars.colors.error} />}
-            button={
-              <ButtonPrimary small onPress={handleRetry}>
-                {tCommon("actions.retry")}
-              </ButtonPrimary>
-            }
-          />
-        )}
+      {error && (
+        <Callout
+          variant="default"
+          title={t("errorTitle")}
+          description={error}
+          asset={<IconAlertFilled color={skinVars.colors.error} />}
+          button={
+            <ButtonPrimary small onPress={handleRetry}>
+              {tCommon("actions.retry")}
+            </ButtonPrimary>
+          }
+        />
+      )}
 
-        <Boxed>
-          <Box paddingX={32} paddingY={32}>
+      <Boxed>
+        <Box paddingX={32} paddingY={32}>
+          <Stack space={32}>
             <Stack space={12}>
               <Stack space={40}>
                 <Inline space={16} alignItems="center">
@@ -131,34 +132,30 @@ function ProcessingStep({ requestDone, error, onRetry, onComplete }: ProcessingS
               </Stack>
               <Text6>{percent}%</Text6>
             </Stack>
-          </Box>
-        </Boxed>
-      </Stack>
 
-      <Boxed>
-        <Box paddingX={20} paddingY={20}>
-          <Stack space={8}>
-            {REASONING.slice(0, index).map((line, i) => {
-              const isActive = i === index - 1 && !complete;
-              const isFinal = complete && i === REASONING.length - 1;
-              const lineColor = isActive || isFinal ? skinVars.colors.textPrimary : skinVars.colors.textSecondary;
-              return (
-                <Inline key={line} space={8} alignItems="center">
-                  {isActive ? (
-                    <Spinner size={14} color={skinVars.colors.brand} />
-                  ) : isFinal ? (
-                    <IconCheckFilled size={14} color={skinVars.colors.brand} />
-                  ) : (
-                    <Box width={14}>
-                      <Text1 regular color={lineColor} textAlign="center">–</Text1>
-                    </Box>
-                  )}
-                  <Text1 regular color={lineColor}>
-                    {line}
-                  </Text1>
-                </Inline>
-              );
-            })}
+            <Stack space={8}>
+              {REASONING.slice(0, index).map((line, i) => {
+                const isActive = i === index - 1 && !complete;
+                const isFinal = complete && i === REASONING.length - 1;
+                const lineColor = isActive || isFinal ? skinVars.colors.textPrimary : skinVars.colors.textSecondary;
+                return (
+                  <Inline key={line} space={8} alignItems="center">
+                    {isActive ? (
+                      <Spinner size={14} color={skinVars.colors.brand} />
+                    ) : isFinal ? (
+                      <IconCheckFilled size={14} color={skinVars.colors.brand} />
+                    ) : (
+                      <Box width={14}>
+                        <Text1 regular color={lineColor} textAlign="center">–</Text1>
+                      </Box>
+                    )}
+                    <Text1 regular color={lineColor}>
+                      {line}
+                    </Text1>
+                  </Inline>
+                );
+              })}
+            </Stack>
           </Stack>
         </Box>
       </Boxed>
