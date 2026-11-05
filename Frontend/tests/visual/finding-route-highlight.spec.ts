@@ -36,6 +36,10 @@ async function openAttackGroup(page: Page) {
   await page.getByRole("button", { name: /Rutas de ataque/ }).click();
 }
 
+async function openPattern(page: Page, ruleId: string) {
+  await page.getByTestId("finding-pattern").filter({ hasText: ruleId }).getByRole("button", { name: /ocurrencias/ }).click();
+}
+
 test.beforeEach(async ({ page, context, baseURL }) => {
   await context.addCookies([{ name: "agenthound-lang", value: "es", url: baseURL! }]);
   await mockOpsDestructiveAnalysis(page);
@@ -61,6 +65,7 @@ test.describe("Finding route highlight", () => {
       els.filter((el) => el.scrollHeight > el.clientHeight + 1).map((el) => el.textContent),
     );
     expect(overflowing).toEqual([]);
+    await expect(canvas(page).locator(".react-flow__minimap")).toHaveCount(0);
     await expect(canvas(page)).toHaveScreenshot("graph-default.png");
     await expect(prioritized(page)).toHaveScreenshot("prioritized-list-fh-011-expanded.png");
   });
@@ -110,6 +115,7 @@ test.describe("Finding route highlight", () => {
   test("shows the selected accordion card", async ({ page }) => {
     await openResults(page);
     await openAttackGroup(page);
+    await openPattern(page, "FH-011");
 
     await card(page, "FH-011 #2").click();
 

@@ -182,7 +182,11 @@
   },
   "risk_reduction": {
     "absolute": 61.8,
-    "percentage": 52.4
+    "percentage": 52.4,
+    "by_group": {
+      "absolute": 43.0,
+      "percentage": 49.6
+    }
   },
   "broken_paths": [
     {

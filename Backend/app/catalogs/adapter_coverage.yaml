@@ -9,10 +9,22 @@
 # kind:
 #   not_expressible    the adapter can't produce the shape the rule needs,
 #                      whatever the file says.
-#   needs_declaration  the rule fires once the file declares the property
-#                      named in the message (on the node's entry; for Dify, in
-#                      the node's `data` block). `properties` lists those
-#                      property names, so a client can render its own text.
+#   needs_declaration  the rule fires once the file declares the properties
+#                      in `declare` (on the node's entry; for Dify, in the
+#                      node's `data` block).
+#
+# `declare` lists alternative options, any one of which unlocks the rule; each
+# option is a list of requirements that must all hold. A requirement names the
+# `node_type` the property goes on (as in the IR), the `property` and the
+# `values` that trigger the rule (any one of them; for a list property, the
+# list contains it). An optional `role` narrows which node of that type:
+#   delegate   the agent another agent delegates to
+#   reachable  a tool the agent of the same option can reach
+#   read       the data asset the agent reads
+#   sent_to    the output the agent sends or writes to
+#   shared     memory that more than one agent uses
+# `message` says the same in English for humans; the structured form lets a
+# client render its own text.
 #
 # Only format limits belong here. A rule that the adapter can reach but a given
 # file happens not to trigger is not a gap. Pinned by
@@ -71,7 +83,8 @@ gaps:
   - kind: needs_declaration
     frameworks: [crewai, dify, langgraph]
     rules: [FH-012]
-    properties: [capability_kinds]
+    declare:
+      - [{ node_type: tool, property: capability_kinds, values: [deployRelease, moveResource] }]
     message: >-
       Declare `capability_kinds: [deployRelease]` (or `moveResource`) on the
       tool; no tool name maps to these verbs.
@@ -79,7 +92,8 @@ gaps:
   - kind: needs_declaration
     frameworks: [crewai, dify, langgraph]
     rules: [FH-013]
-    properties: [recipient_type]
+    declare:
+      - [{ node_type: output, role: sent_to, property: recipient_type, values: [public_channel, broadcast] }]
     message: >-
       Declare `recipient_type: public_channel` (or `broadcast`) on the output
       the agent sends to.
@@ -87,14 +101,17 @@ gaps:
   - kind: needs_declaration
     frameworks: [crewai, langgraph]
     rules: [FH-014]
-    properties: [trust_level]
+    declare:
+      - [{ node_type: agent, role: delegate, property: trust_level, values: [trusted_core] }]
     message: >-
       Declare `trust_level: trusted_core` on the agent named in `delegates_to`.
 
   - kind: needs_declaration
     frameworks: [crewai, dify, langgraph]
     rules: [FH-017]
-    properties: [exposure_boundary, authentication_scope]
+    declare:
+      - - { node_type: agent, property: exposure_boundary, values: [external] }
+        - { node_type: tool, role: reachable, property: authentication_scope, values: [elevated] }
     message: >-
       Declare `exposure_boundary: external` on the agent and
       `authentication_scope: elevated` on a tool it can reach.
@@ -102,22 +119,26 @@ gaps:
   - kind: needs_declaration
     frameworks: [crewai, dify, langgraph]
     rules: [FH-025]
-    properties: [boundary, trust_level]
+    # FH-025 also accepts trust_level: untrusted, but data assets don't take
+    # trust_level in a framework file, so boundary is the only way in.
+    declare:
+      - [{ node_type: data_asset, role: read, property: boundary, values: [external] }]
     message: >-
-      Declare `boundary: external` (or `trust_level: untrusted`) on the data
-      asset being read.
+      Declare `boundary: external` on the data asset being read.
 
   - kind: needs_declaration
     frameworks: [crewai, dify, langgraph]
     rules: [FH-026]
-    properties: [contains_regulated_data]
+    declare:
+      - [{ node_type: data_asset, property: contains_regulated_data, values: [gdpr] }]
     message: >-
       Declare `contains_regulated_data: [gdpr]` on the data asset.
 
   - kind: needs_declaration
     frameworks: [dify]
     rules: [FH-004, FH-034]
-    properties: [boundary]
+    declare:
+      - [{ node_type: output, role: sent_to, property: boundary, values: [external] }]
     message: >-
       Answer/end nodes are internal unless declared otherwise; declare
       `boundary: external` on the one the agent writes to. Outputs created for
@@ -126,7 +147,8 @@ gaps:
   - kind: needs_declaration
     frameworks: [langgraph]
     rules: [FH-009, FH-020]
-    properties: [shared]
+    declare:
+      - [{ node_type: memory, role: shared, property: shared, values: [true] }]
     message: >-
       Memory nodes are private by default; declare `shared: true` on memory
       that more than one agent uses.

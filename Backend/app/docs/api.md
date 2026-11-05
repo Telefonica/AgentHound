@@ -36,11 +36,15 @@ Response:
   "analysis_id": "uuid",
   "status": "parsed",
   "name": "HireSmart Copilot",
+  "source_framework": "crewai",
   "summary": { "nodes": 7, "edges": 6, "findings": 0,
                "critical": 0, "high": 0, "medium": 0, "max_score": 0.0 },
   "warnings": [
     { "kind": "needs_declaration", "rules": ["FH-026"],
       "properties": ["contains_regulated_data"],
+      "declare": [[ { "node_type": "data_asset",
+                      "property": "contains_regulated_data",
+                      "values": ["gdpr"] } ]],
       "message": "Declare `contains_regulated_data: [gdpr]` on the data asset." },
     { "kind": "ignored_property", "rules": [],
       "properties": ["contains_regulated_dta"],
@@ -54,10 +58,24 @@ Response:
 `warnings` first lists the rules the file's framework can't reach, from
 [`catalogs/adapter_coverage.yaml`](../catalogs/adapter_coverage.yaml).
 `kind` is `not_expressible` (the adapter can't produce the shape the rule needs)
-or `needs_declaration` (the rule fires once the file declares the property the
-`message` names). These are always absent for the generic format, which covers
-the full rule catalog. They depend only on the framework, so they're also
-returned for analyses saved before the field existed.
+or `needs_declaration` (the rule fires once the file declares what `declare`
+lists). `declare` holds alternative options, any one of which unlocks the rule;
+each option is a list of requirements that must all hold, and each requirement
+names the `node_type` the property goes on, the `property` and the `values`
+that trigger the rule (any one of them; for a list property, the list must
+contain it). An optional `role` narrows which node of that type: `delegate`
+(the agent another agent delegates to), `reachable` (a tool the option's agent
+can reach), `read` (the data asset the agent reads), `sent_to` (the output the
+agent sends to) or `shared` (memory more than one agent uses). `properties` is the property names in `declare`, in order. Once
+the analysis has run, a `needs_declaration` entry is left out if any of its
+rules fired: the file already has the declaration. These are always absent for
+the generic format, which covers the full rule catalog. They're computed from
+the framework and the findings on every read, so they're also returned for
+analyses saved before the field existed.
+
+`source_framework` is the detected input format (`generic`, `crewai`, `dify` or
+`langgraph`); `POST .../analyze` and `GET /analyses/{analysis_id}` return it
+too. In a Dify file, declarations go in the node's `data` block.
 
 Then come the file's own `ignored_property` entries: a key on a framework node
 that looks like a property declaration but was dropped, either a near-miss of a
@@ -69,8 +87,8 @@ these.
 
 Every entry has `kind`, `rules`, `properties` and `message`. `message` is
 English; a client that translates should build its text from `kind`, `rules`
-and `properties` (plus `node`, `node_type` and `suggestion` on
-`ignored_property`). `GET /analyses/{analysis_id}` and `POST .../analyze` return
+and `properties` (plus `declare` on `needs_declaration`, and `node`,
+`node_type` and `suggestion` on `ignored_property`). `GET /analyses/{analysis_id}` and `POST .../analyze` return
 the same array.
 
 Common errors: `EMPTY_INPUT`, `INVALID_YAML`, `INVALID_NODE_TYPE`,
@@ -102,12 +120,13 @@ Response (same shape as `/analyze` produces for the results view):
   "analysis_id": "uuid",
   "status": "completed",
   "name": "HireSmart Copilot",
+  "source_framework": "crewai",
   "summary": { "nodes": 7, "edges": 6, "findings": 3,
                "critical": 1, "high": 2, "medium": 0, "max_score": 10.0 },
   "graph": { "nodes": [], "edges": [] },
   "findings": [ { "id", "rule_id", "group_id", ... } ],
   "groups": [ { "group_id", "rule_id", "count", ... } ],
-  "warnings": [ { "kind", "rules", "message" } ]
+  "warnings": [ { "kind", "rules", "properties", "message" } ]
 }
 ```
 

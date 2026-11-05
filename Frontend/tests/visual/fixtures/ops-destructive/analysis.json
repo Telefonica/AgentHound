@@ -11,5 +11,202 @@
     "high": 8,
     "medium": 5,
     "max_score": 10.0
-  }
+  },
+  "warnings": [
+    {
+      "kind": "not_expressible",
+      "rules": [
+        "FH-006"
+      ],
+      "message": "Fetched web content ends at the tool that fetched it; no adapter passes it on to another agent, so the propagation path FH-006 needs can't occur.",
+      "properties": []
+    },
+    {
+      "kind": "not_expressible",
+      "rules": [
+        "FH-015"
+      ],
+      "message": "No adapter emits the interpretIntent verb.",
+      "properties": []
+    },
+    {
+      "kind": "not_expressible",
+      "rules": [
+        "FH-031"
+      ],
+      "message": "No adapter emits the retry verb.",
+      "properties": []
+    },
+    {
+      "kind": "not_expressible",
+      "rules": [
+        "FH-030"
+      ],
+      "message": "Each tool's effect ends at its own output or data asset, so no path passes through two side-effect tools.",
+      "properties": []
+    },
+    {
+      "kind": "needs_declaration",
+      "rules": [
+        "FH-012"
+      ],
+      "message": "Declare `capability_kinds: [deployRelease]` (or `moveResource`) on the tool; no tool name maps to these verbs.",
+      "properties": [
+        "capability_kinds"
+      ],
+      "declare": [
+        [
+          {
+            "node_type": "tool",
+            "property": "capability_kinds",
+            "values": [
+              "deployRelease",
+              "moveResource"
+            ]
+          }
+        ]
+      ]
+    },
+    {
+      "kind": "needs_declaration",
+      "rules": [
+        "FH-013"
+      ],
+      "message": "Declare `recipient_type: public_channel` (or `broadcast`) on the output the agent sends to.",
+      "properties": [
+        "recipient_type"
+      ],
+      "declare": [
+        [
+          {
+            "node_type": "output",
+            "role": "sent_to",
+            "property": "recipient_type",
+            "values": [
+              "public_channel",
+              "broadcast"
+            ]
+          }
+        ]
+      ]
+    },
+    {
+      "kind": "needs_declaration",
+      "rules": [
+        "FH-014"
+      ],
+      "message": "Declare `trust_level: trusted_core` on the agent named in `delegates_to`.",
+      "properties": [
+        "trust_level"
+      ],
+      "declare": [
+        [
+          {
+            "node_type": "agent",
+            "role": "delegate",
+            "property": "trust_level",
+            "values": [
+              "trusted_core"
+            ]
+          }
+        ]
+      ]
+    },
+    {
+      "kind": "needs_declaration",
+      "rules": [
+        "FH-017"
+      ],
+      "message": "Declare `exposure_boundary: external` on the agent and `authentication_scope: elevated` on a tool it can reach.",
+      "properties": [
+        "exposure_boundary",
+        "authentication_scope"
+      ],
+      "declare": [
+        [
+          {
+            "node_type": "agent",
+            "property": "exposure_boundary",
+            "values": [
+              "external"
+            ]
+          },
+          {
+            "node_type": "tool",
+            "role": "reachable",
+            "property": "authentication_scope",
+            "values": [
+              "elevated"
+            ]
+          }
+        ]
+      ]
+    },
+    {
+      "kind": "needs_declaration",
+      "rules": [
+        "FH-025"
+      ],
+      "message": "Declare `boundary: external` on the data asset being read.",
+      "properties": [
+        "boundary"
+      ],
+      "declare": [
+        [
+          {
+            "node_type": "data_asset",
+            "role": "read",
+            "property": "boundary",
+            "values": [
+              "external"
+            ]
+          }
+        ]
+      ]
+    },
+    {
+      "kind": "needs_declaration",
+      "rules": [
+        "FH-026"
+      ],
+      "message": "Declare `contains_regulated_data: [gdpr]` on the data asset.",
+      "properties": [
+        "contains_regulated_data"
+      ],
+      "declare": [
+        [
+          {
+            "node_type": "data_asset",
+            "property": "contains_regulated_data",
+            "values": [
+              "gdpr"
+            ]
+          }
+        ]
+      ]
+    },
+    {
+      "kind": "needs_declaration",
+      "rules": [
+        "FH-009",
+        "FH-020"
+      ],
+      "message": "Memory nodes are private by default; declare `shared: true` on memory that more than one agent uses.",
+      "properties": [
+        "shared"
+      ],
+      "declare": [
+        [
+          {
+            "node_type": "memory",
+            "role": "shared",
+            "property": "shared",
+            "values": [
+              true
+            ]
+          }
+        ]
+      ]
+    }
+  ]
 }

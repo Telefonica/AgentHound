@@ -139,7 +139,7 @@ describe("toAnalysisResult groups", () => {
 
   it("carries the backend's group anchor onto each finding, and none for rule-wide groups", () => {
     const result = toAnalysisResult(
-      { analysis_id: "a1", status: "done", name: "a", warnings: [], summary: { nodes: 0, edges: 0, findings: 2, critical: 0, high: 2, medium: 0, max_score: 8 } },
+      { analysis_id: "a1", status: "done", name: "a", source_framework: "generic", warnings: [], summary: { nodes: 0, edges: 0, findings: 2, critical: 0, high: 2, medium: 0, max_score: 8 } },
       { nodes: [], edges: [] },
       {
         findings: [backendFinding("f1", "g1", ["in", "agent"]), backendFinding("f2", "g2", ["agent"])],

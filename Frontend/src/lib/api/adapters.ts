@@ -33,6 +33,7 @@ import type {
   BackendGraphNode,
   BackendSummary,
   ControlRecommendation,
+  CoverageWarning,
   CreateAnalysisResponse,
   FindingDetailResponse,
   FindingsResponse,
@@ -358,7 +359,7 @@ export interface AnalysisCounts {
  * before-findings; `riskReductionPct` is the percentage drop (0–100), rounded. */
 export interface BeforeAfter {
   before: { findingCount: number; criticalCount: number; maxScore: number; riskScoreTotal: number };
-  after: { findingCount: number; criticalCount: number; maxScore: number; riskReductionPct: number };
+  after: { findingCount: number; criticalCount: number; maxScore: number; riskReductionPct: number; riskReductionByGroupPct: number };
 }
 
 /** The single highest-impact control recommendation (doc 03 §choke-point). */
@@ -403,6 +404,11 @@ export interface AnalysisResult {
   nodes: GraphNode[];
   edges: GraphEdge[];
   attacks: Attack[];
+  /** Detected input format: `generic`, `crewai`, `dify` or `langgraph`. */
+  sourceFramework: string;
+  /** Rules the file's framework can't reach or only reaches once declared, and
+   * declarations the adapter dropped. Always empty for the generic format. */
+  warnings: CoverageWarning[];
   /** Populated once the Phase 2 recommend + simulate calls resolve; null while
    * loading or if they fail (the Findings tab stays usable either way). */
   solution: SolutionResult | null;
@@ -439,6 +445,8 @@ export function toAnalysisResult(
     nodes: toGraphNodes(graph.nodes),
     edges: toGraphEdges(graph.edges),
     attacks: attacksFromFindings(findings),
+    sourceFramework: create.source_framework,
+    warnings: create.warnings,
     solution: null,
   };
 }
@@ -485,6 +493,7 @@ export function toAnalyzedResult(resp: AnalyzeResponse): AnalysisResult {
       analysis_id: resp.analysis_id,
       status: resp.status,
       name: resp.name,
+      source_framework: resp.source_framework,
       summary: resp.summary,
       warnings: resp.warnings,
     },
@@ -547,7 +556,7 @@ export function toSolutionResult(
   const findingById = new Map(base.findings.map((f) => [f.id, f]));
   const recByControlId = new Map(recommendations.map((r) => [r.control_id, r]));
   const riskScoreTotal = Number(base.findings.reduce((sum, f) => sum + f.score, 0).toFixed(1));
-  const { percentage } = sim.risk_reduction;
+  const { percentage, by_group: byGroup } = sim.risk_reduction;
 
   const brokenIds = new Set(sim.broken_paths.map((b) => b.finding_id));
   const attacks = base.attacks.filter((a) => brokenIds.has(a.id));
@@ -605,6 +614,7 @@ export function toSolutionResult(
         criticalCount: sim.after.critical_count,
         maxScore: sim.after.max_score,
         riskReductionPct: Math.round(percentage),
+        riskReductionByGroupPct: Math.round(byGroup.percentage),
       },
     },
     nodes: toGraphNodes(sim.graph.nodes),

@@ -73,8 +73,9 @@ def create_analysis(
             "analysis_id": result.ir.analysis_id,
             "status": "parsed",
             "name": result.ir.metadata.name,
+            "source_framework": result.ir.source_framework.value,
             "summary": result.summary().model_dump(),
-            "warnings": analysis_warnings(result.ir),
+            "warnings": analysis_warnings(result.ir, result.findings),
         }
     finally:
         # Release the underlying spooled temp file/descriptor on every path,
@@ -91,7 +92,7 @@ def _list_item(result) -> dict:
         "source_framework": result.ir.source_framework.value,
         "uploaded_at": result.ir.metadata.uploaded_at.isoformat(),
         "summary": result.summary().model_dump(),
-        "warnings": analysis_warnings(result.ir),
+        "warnings": analysis_warnings(result.ir, result.findings),
     }
 
 
@@ -148,9 +149,10 @@ def analyze_analysis(analysis_id: str, request: AnalyzeRequest | None = None) ->
         "analysis_id": result.ir.analysis_id,
         "status": "completed",
         "name": result.ir.metadata.name,
+        "source_framework": result.ir.source_framework.value,
         "summary": result.summary().model_dump(),
         "graph": serialize_graph(result.ir, result.findings),
         "findings": [f.model_dump() for f in result.findings],
         "groups": groups,
-        "warnings": analysis_warnings(result.ir),
+        "warnings": analysis_warnings(result.ir, result.findings),
     }

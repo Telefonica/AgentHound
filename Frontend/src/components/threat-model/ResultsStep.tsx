@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useId, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import {
@@ -9,6 +9,7 @@ import {
   Boxed,
   BoxedAccordion,
   BoxedAccordionItem,
+  ButtonLink,
   ButtonPrimary,
   ButtonSecondary,
   Callout,
@@ -38,13 +39,16 @@ import {
   useTheme,
 } from "@telefonica/mistica";
 import type { IconProps } from "@telefonica/mistica";
+import CoverageWarnings from "@/components/threat-model/CoverageWarnings";
 import { FindingId, FindingRoute } from "@/components/threat-model/FindingIdentity";
 import SeverityBadge from "@/components/threat-model/SeverityBadge";
 import { StepHeader } from "@/components/threat-model/StepSection";
 import InlineError from "@/components/ui/InlineError";
 import { severityAccentColor } from "@/lib/threatModelColors";
 import { formatSnakeCase, formatValue } from "@/lib/format";
-import { findingLabels } from "@/lib/results/findingDisplay";
+import { ShowMoreOccurrences, useCappedOccurrences } from "@/components/threat-model/CappedOccurrences";
+import { findingLabels, groupFindings, type FindingPattern } from "@/lib/results/findingDisplay";
+import { usePatternTitle } from "@/lib/results/usePatternTitle";
 import { SEVERITY_STYLES } from "@/lib/severity";
 import type { AnalysisResult, ChokepointRec } from "@/lib/api/adapters";
 import {
@@ -79,7 +83,7 @@ interface MetricRowProps {
 
 function MetricRow({ label, value, color }: MetricRowProps) {
   return (
-    <Inline space="between" alignItems="baseline">
+    <Inline space="between" alignItems="baseline" dataAttributes={{ testid: "metric-row" }}>
       <Text1 regular color={skinVars.colors.textSecondary}>{label}</Text1>
       <Text1 medium color={color}>{value}</Text1>
     </Inline>
@@ -91,27 +95,18 @@ interface BeforeAfterCardProps {
   Icon: (props: IconProps) => ReactElement;
   color: string;
   rows: { label: string; value: string | number; color?: string }[];
-  headerBadge?: { label: string; value: string | number; color: string };
 }
 
-function BeforeAfterCard({ label, Icon, color, rows, headerBadge }: BeforeAfterCardProps) {
+function BeforeAfterCard({ label, Icon, color, rows }: BeforeAfterCardProps) {
   return (
-    <Boxed>
+    <Boxed height="100%" dataAttributes={{ testid: "before-after-card" }}>
       <Box paddingX={20} paddingY={20}>
         <Stack space={16}>
-          <Inline space="between" alignItems="center">
-            <Inline space={12} alignItems="center">
-              <Circle size={32} backgroundColor={skinVars.colors.neutralLow}>
-                <Icon size={18} color={color} />
-              </Circle>
-              <Text2 medium color={color}>{label}</Text2>
-            </Inline>
-            {headerBadge && (
-              <Inline space={4} alignItems="baseline">
-                <Text2 medium color={headerBadge.color}>{headerBadge.value}</Text2>
-                <Text1 regular color={skinVars.colors.textSecondary}>{headerBadge.label}</Text1>
-              </Inline>
-            )}
+          <Inline space={12} alignItems="center">
+            <Circle size={32} backgroundColor={skinVars.colors.neutralLow}>
+              <Icon size={18} color={color} />
+            </Circle>
+            <Text2 medium color={color}>{label}</Text2>
           </Inline>
           <Divider />
           <Stack space={8}>
@@ -135,9 +130,10 @@ interface FindingCardProps {
   routeHint: string;
   selected: boolean;
   onSelect?: (id: string) => void;
+  inPattern?: boolean;
 }
 
-function FindingCard({ finding, label, nodesById, isDarkMode, tSeverity, scoreLabel, routeHint, selected, onSelect }: FindingCardProps) {
+function FindingCard({ finding, label, nodesById, isDarkMode, tSeverity, scoreLabel, routeHint, selected, onSelect, inPattern = false }: FindingCardProps) {
   const accent = severityAccentColor(finding.severity, isDarkMode);
   const hasRefs = Boolean(
     finding.owaspAgentic?.length || finding.owaspLlm?.length || finding.mitre?.length,
@@ -156,9 +152,9 @@ function FindingCard({ finding, label, nodesById, isDarkMode, tSeverity, scoreLa
             <Text2 medium color={accent}>{scoreLabel}: {finding.score}</Text2>
           </Inline>
           <Stack space={4}>
-            <Text2 medium>{finding.title}</Text2>
+            {!inPattern && <Text2 medium>{finding.title}</Text2>}
             <FindingRoute path={finding.path} nodesById={nodesById} />
-            {finding.desc && <Text1 regular color={skinVars.colors.textSecondary}>{finding.desc}</Text1>}
+            {!inPattern && finding.desc && <Text1 regular color={skinVars.colors.textSecondary}>{finding.desc}</Text1>}
             {finding.evidence && Object.keys(finding.evidence).length > 0 && (
               <Inline space={4} wrap verticalSpace={4}>
                 {Object.entries(finding.evidence).map(([key, value]) => (
@@ -197,6 +193,90 @@ function FindingCard({ finding, label, nodesById, isDarkMode, tSeverity, scoreLa
     >
       {card}
     </Touchable>
+  );
+}
+
+interface FindingPatternCardProps extends Omit<FindingCardProps, "finding" | "label" | "selected" | "onSelect" | "inPattern"> {
+  pattern: FindingPattern<Finding>;
+  title: string;
+  labelById: Map<string, string>;
+  selectedFindingId: string | null;
+  onSelect: (id: string) => void;
+}
+
+function FindingPatternCard({ pattern, title, labelById, selectedFindingId, onSelect, ...cardProps }: FindingPatternCardProps) {
+  const t = useTranslations("results");
+  const contentId = useId();
+  const [expanded, setExpanded] = useState(false);
+  const [seenSelection, setSeenSelection] = useState(selectedFindingId);
+  const { visible, showAll, toggleShowAll } = useCappedOccurrences(pattern.findings, selectedFindingId);
+  const [top] = pattern.findings;
+  const count = pattern.findings.length;
+  const contains = (id: string | null) => pattern.findings.some((f) => f.id === id);
+  if (selectedFindingId !== seenSelection) {
+    setSeenSelection(selectedFindingId);
+    if (contains(selectedFindingId)) setExpanded(true);
+  }
+  const holdsSelection = !expanded && contains(selectedFindingId);
+  return (
+    <div
+      data-testid="finding-pattern"
+      style={{
+        borderRadius: skinVars.borderRadii.container,
+        outline: holdsSelection ? `2px solid ${skinVars.colors.borderSelected}` : undefined,
+        outlineOffset: 2,
+      }}
+    >
+      <Boxed>
+        <Box paddingX={20} paddingY={16}>
+          <Stack space={12}>
+            <Inline space="between" alignItems="center">
+              <Inline space={8} alignItems="center" wrap verticalSpace={4}>
+                <SeverityBadge severity={top.severity} small>{cardProps.tSeverity(top.severity)}</SeverityBadge>
+                <Text1 medium color={skinVars.colors.textSecondary}>{top.ruleId}</Text1>
+                <Tag type="inactive" small>{t("findingGroupCount", { count })}</Tag>
+                <Tag type="inactive" small>{formatSnakeCase(top.category)}</Tag>
+              </Inline>
+              <Text2 medium color={severityAccentColor(top.severity, cardProps.isDarkMode)}>{cardProps.scoreLabel}: {top.score}</Text2>
+            </Inline>
+            <Stack space={4}>
+              <Text2 medium>{title}</Text2>
+              {top.desc && <Text1 regular color={skinVars.colors.textSecondary}>{top.desc}</Text1>}
+            </Stack>
+            <Box>
+              <ButtonLink
+                small
+                bleedLeft
+                aria-expanded={expanded}
+                aria-controls={expanded ? contentId : undefined}
+                aria-description={holdsSelection ? t("findingGroupHoldsSelection") : undefined}
+                onPress={() => setExpanded((v) => !v)}
+              >
+                {expanded ? t("hideOccurrences") : t("showOccurrences", { count })}
+              </ButtonLink>
+            </Box>
+            {expanded && (
+              <Box id={contentId}>
+                <Stack space={12}>
+                  {visible.map((f) => (
+                    <FindingCard
+                      key={f.id}
+                      {...cardProps}
+                      finding={f}
+                      label={labelById.get(f.id) ?? f.ruleId}
+                      selected={f.id === selectedFindingId}
+                      onSelect={f.path.length > 0 ? onSelect : undefined}
+                      inPattern
+                    />
+                  ))}
+                  <ShowMoreOccurrences total={count} visibleCount={visible.length} showAll={showAll} onToggle={toggleShowAll} controls={contentId} />
+                </Stack>
+              </Box>
+            )}
+          </Stack>
+        </Box>
+      </Boxed>
+    </div>
   );
 }
 
@@ -241,11 +321,22 @@ function ResultsStep({ result, hideTitle = false, stepTitle }: ResultsStepProps)
   const clearSelection = useCallback(() => setSelectedFindingId(null), []);
   const labelById = useMemo(() => findingLabels(result?.findings ?? []), [result]);
   const nodesById = useMemo(() => new Map((result?.nodes ?? []).map((n) => [n.id, n])), [result]);
+  const patternTitle = usePatternTitle(nodesById);
   const [resolvedFindings, openFindings] = useMemo(() => {
     const broken = new Set(result?.solution?.brokenFindingIds);
     const all = result?.findings ?? [];
     return [all.filter((f) => broken.has(f.id)), all.filter((f) => !broken.has(f.id))];
   }, [result]);
+  const findingGroups = useMemo(
+    () =>
+      (["attack", "hygiene"] as const)
+        .map((cls) => {
+          const items = (result?.findings ?? []).filter((f: Finding) => f.findingClass === cls);
+          return { cls, items, patterns: groupFindings(items) };
+        })
+        .filter(({ items }) => items.length > 0),
+    [result],
+  );
 
   if (!result) {
     return <InlineError message={tCommon("error.description")} />;
@@ -253,9 +344,14 @@ function ResultsStep({ result, hideTitle = false, stepTitle }: ResultsStepProps)
 
   const { counts, findings } = result;
   const sol = result.solution;
-  const findingGroups = (["attack", "hygiene"] as const)
-    .map((cls) => ({ cls, items: findings.filter((f: Finding) => f.findingClass === cls) }))
-    .filter(({ items }) => items.length > 0);
+  const cardProps = {
+    nodesById,
+    isDarkMode,
+    tSeverity,
+    scoreLabel: t("tableHeaders.score"),
+    routeHint: t("showRouteHint"),
+  };
+  const causeCount = (items: Finding[]) => new Set(items.map((f) => f.groupId)).size;
   // The Proposed Solution tab needs the live simulation; if it failed to load
   // (Phase 2 unavailable), surface a notice rather than a misleading green graph.
   const solutionUnavailable = solved && !sol;
@@ -293,6 +389,8 @@ function ResultsStep({ result, hideTitle = false, stepTitle }: ResultsStepProps)
         <InlineError message={tCommon("error.description")} />
       ) : (
         <Stack space={32}>
+          {!solved && <CoverageWarnings warnings={result.warnings} framework={result.sourceFramework} />}
+
           <div ref={graphSectionRef} style={{ scrollMarginTop: 16, scrollMarginBottom: 16 }}>
             <Stack space={16}>
               <Stack space={4}>
@@ -387,31 +485,32 @@ function ResultsStep({ result, hideTitle = false, stepTitle }: ResultsStepProps)
               </Grid>
             ) : (
               sol && (
-                <Inline space={16} alignItems="center" expand={[0, 2]}>
+                <Inline space={16} alignItems="stretch" expand={[0, 2]} dataAttributes={{ testid: "before-after" }}>
                   <BeforeAfterCard
                     label={t("before")}
                     Icon={SEVERITY_STYLES.critical.Icon}
                     color={severityAccentColor("critical", isDarkMode)}
                     rows={[
                       { label: t("beforeAfter.findingCount"), value: sol.beforeAfter.before.findingCount, color: severityAccentColor("critical", isDarkMode) },
+                      { label: t("beforeAfter.causeCount"), value: causeCount(findings), color: severityAccentColor("critical", isDarkMode) },
                       { label: t("beforeAfter.criticalCount"), value: sol.beforeAfter.before.criticalCount, color: severityAccentColor("critical", isDarkMode) },
                       { label: t("beforeAfter.maxScore"), value: sol.beforeAfter.before.maxScore, color: severityAccentColor("critical", isDarkMode) },
                     ]}
                   />
-                  <IconArrowLineRightRegular color={skinVars.colors.brand} />
+                  <div style={{ display: "flex", alignItems: "center", height: "100%" }}>
+                    <IconArrowLineRightRegular color={skinVars.colors.brand} />
+                  </div>
                   <BeforeAfterCard
                     label={t("after")}
                     Icon={IconShieldCheckedOkRegular}
                     color={severityAccentColor("none", isDarkMode)}
-                    headerBadge={{
-                      label: t("beforeAfter.riskReduction"),
-                      value: `-${sol.beforeAfter.after.riskReductionPct}%`,
-                      color: severityAccentColor("none", isDarkMode),
-                    }}
                     rows={[
                       { label: t("beforeAfter.findingCount"), value: sol.beforeAfter.after.findingCount, color: severityAccentColor("none", isDarkMode) },
+                      { label: t("beforeAfter.causeCount"), value: causeCount(openFindings), color: severityAccentColor("none", isDarkMode) },
                       { label: t("beforeAfter.criticalCount"), value: sol.beforeAfter.after.criticalCount, color: severityAccentColor("none", isDarkMode) },
                       { label: t("beforeAfter.maxScore"), value: sol.beforeAfter.after.maxScore, color: severityAccentColor("none", isDarkMode) },
+                      { label: t("beforeAfter.riskReduction"), value: `-${sol.beforeAfter.after.riskReductionPct}%`, color: severityAccentColor("none", isDarkMode) },
+                      { label: t("beforeAfter.riskReductionByGroup"), value: `-${sol.beforeAfter.after.riskReductionByGroupPct}%`, color: severityAccentColor("none", isDarkMode) },
                     ]}
                   />
                 </Inline>
@@ -426,27 +525,37 @@ function ResultsStep({ result, hideTitle = false, stepTitle }: ResultsStepProps)
           {!solved ? (
             findingGroups.length > 0 && (
               <BoxedAccordion>
-                {findingGroups.map(({ cls, items }) => (
+                {findingGroups.map(({ cls, items, patterns }) => (
                   <BoxedAccordionItem
                     key={cls}
                     title={cls === "attack" ? t("attackFindingsTitle") : t("hygieneTitle")}
+                    subtitle={t("findingPatternsCount", { count: patterns.length })}
                     right={<Tag type="inactive" small>{`${items.length}`}</Tag>}
                     content={
                       <Stack space={12}>
-                        {items.map((f: Finding) => (
-                          <FindingCard
-                            key={f.id}
-                            finding={f}
-                            label={labelById.get(f.id) ?? f.ruleId}
-                            nodesById={nodesById}
-                            isDarkMode={isDarkMode}
-                            tSeverity={tSeverity}
-                            scoreLabel={t("tableHeaders.score")}
-                            routeHint={t("showRouteHint")}
-                            selected={f.id === selectedFindingId}
-                            onSelect={f.path.length > 0 ? selectFinding : undefined}
-                          />
-                        ))}
+                        {patterns.map((pattern) => {
+                          const [only] = pattern.findings;
+                          return pattern.findings.length === 1 ? (
+                            <FindingCard
+                              key={pattern.id}
+                              {...cardProps}
+                              finding={only}
+                              label={labelById.get(only.id) ?? only.ruleId}
+                              selected={only.id === selectedFindingId}
+                              onSelect={only.path.length > 0 ? selectFinding : undefined}
+                            />
+                          ) : (
+                            <FindingPatternCard
+                              key={pattern.id}
+                              {...cardProps}
+                              pattern={pattern}
+                              title={patternTitle(only)}
+                              labelById={labelById}
+                              selectedFindingId={selectedFindingId}
+                              onSelect={selectFinding}
+                            />
+                          );
+                        })}
                       </Stack>
                     }
                   />

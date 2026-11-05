@@ -2,6 +2,14 @@
 
 import type { Finding, GraphNode } from "@/types/ThreatModel";
 
+export const VISIBLE_OCCURRENCES = 10;
+
+export type NodesById = Map<string, Pick<GraphNode, "label" | "type">>;
+
+export function capped<T>(items: T[], limit: number, holdsSelection: (item: T) => boolean): T[] {
+  return items.filter((item, i) => i < limit || holdsSelection(item));
+}
+
 export function findingLabels(findings: Pick<Finding, "id" | "ruleId">[]): Map<string, string> {
   const totals = new Map<string, number>();
   findings.forEach((f) => totals.set(f.ruleId, (totals.get(f.ruleId) ?? 0) + 1));

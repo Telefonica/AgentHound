@@ -190,3 +190,14 @@ describe("buildGraph node findings", () => {
     expect(marks(true).every(([, mark]) => mark === undefined)).toBe(true);
   });
 });
+
+describe("buildGraph nodes", () => {
+  it("does not draw control nodes", () => {
+    const nodes: GraphNode[] = [
+      { id: "a", type: "agent", label: "a", x: 0, y: 0 },
+      { id: "k", type: "control", label: "k", x: 0, y: 0 },
+      { id: "b", type: "tool", label: "b", x: 0, y: 0 },
+    ];
+    expect(buildGraph(nodes, [], [], false).nodes.map((n) => n.id)).toEqual(["a", "b"]);
+  });
+});
