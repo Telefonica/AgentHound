@@ -107,6 +107,7 @@
     "title": "Reading agent architecture…",
     "subtitle": "YAML → IR normalization → capability graph",
     "progressLabel": "Progress",
+    "elapsedTime": "Elapsed time {time}",
     "doneTitle": "Architecture parsed",
     "doneDesc": "{findings} findings detected · {critical} critical · max score {maxScore} · {agents} agents",
     "errorTitle": "Parsing failed"

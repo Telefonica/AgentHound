@@ -107,6 +107,7 @@
     "title": "Leyendo la arquitectura del agente…",
     "subtitle": "YAML → normalización IR → grafo de capacidades",
     "progressLabel": "Progreso",
+    "elapsedTime": "Tiempo transcurrido {time}",
     "doneTitle": "Arquitectura procesada",
     "doneDesc": "{findings} hallazgos detectados · {critical} críticos · puntuación máxima {maxScore} · {agents} agentes",
     "errorTitle": "El procesado ha fallado"
