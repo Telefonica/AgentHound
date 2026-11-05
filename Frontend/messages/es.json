@@ -219,6 +219,10 @@
     "showAllFindingGroups": "Ver los {count} patrones",
     "showMoreOccurrences": "Ver {count} más",
     "showTopFindingGroups": "Ver solo los {count} primeros",
+    "showTopOccurrences": "Ver solo las {count} primeras",
+    "findingPatternsCount": "{count, plural, one {# causa} other {# causas}}",
+    "showOccurrences": "Ver las {count} ocurrencias",
+    "hideOccurrences": "Ocultar ocurrencias",
     "findingSummary": "{title} · puntuación {score}",
     "highlightedRoute": "Ruta resaltada",
     "nodeFindings": "{count, plural, one {# hallazgo} other {# hallazgos}} en este nodo · máx. {score}",
@@ -280,9 +284,11 @@
     },
     "beforeAfter": {
       "findingCount": "Hallazgos",
+      "causeCount": "Causas",
       "criticalCount": "Hallazgos críticos",
       "maxScore": "Puntuación máxima",
-      "riskReduction": "Reducción de riesgo"
+      "riskReduction": "Reducción por hallazgo",
+      "riskReductionByGroup": "Reducción por causa"
     },
     "findingsTableTitle": "Hallazgos inferidos",
     "attackFindingsTitle": "Rutas de ataque",

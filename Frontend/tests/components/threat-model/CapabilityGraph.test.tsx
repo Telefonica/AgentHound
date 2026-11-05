@@ -205,6 +205,15 @@ describe("CapabilityGraph — prioritized findings", () => {
     expect(groupFor("FH-001")!.hasAttribute("aria-description")).toBe(false);
   });
 
+  it("only points a group at its rows while they are in the page", () => {
+    render();
+    expect(groupFor("FH-001")!.hasAttribute("aria-controls")).toBe(false);
+
+    press(groupFor("FH-001")!);
+    const id = groupFor("FH-001")!.getAttribute("aria-controls");
+    expect(id && view.container.querySelector(`[id="${id}"]`)).toBeTruthy();
+  });
+
   it("shows the first occurrences of a large pattern and the rest on demand", () => {
     const many = Array.from({ length: 14 }, (_, i) => ({ ...findings[1]!, id: `o${i}` }));
     renderList(many);
@@ -217,7 +226,7 @@ describe("CapabilityGraph — prioritized findings", () => {
 
     expect(rows()).toHaveLength(14);
 
-    press(buttonNamed("Ver solo los 10 primeros")!);
+    press(buttonNamed("Ver solo las 10 primeras")!);
 
     expect(rows()).toHaveLength(10);
   });

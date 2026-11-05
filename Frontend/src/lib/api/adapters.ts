@@ -359,7 +359,7 @@ export interface AnalysisCounts {
  * before-findings; `riskReductionPct` is the percentage drop (0–100), rounded. */
 export interface BeforeAfter {
   before: { findingCount: number; criticalCount: number; maxScore: number; riskScoreTotal: number };
-  after: { findingCount: number; criticalCount: number; maxScore: number; riskReductionPct: number };
+  after: { findingCount: number; criticalCount: number; maxScore: number; riskReductionPct: number; riskReductionByGroupPct: number };
 }
 
 /** The single highest-impact control recommendation (doc 03 §choke-point). */
@@ -556,7 +556,7 @@ export function toSolutionResult(
   const findingById = new Map(base.findings.map((f) => [f.id, f]));
   const recByControlId = new Map(recommendations.map((r) => [r.control_id, r]));
   const riskScoreTotal = Number(base.findings.reduce((sum, f) => sum + f.score, 0).toFixed(1));
-  const { percentage } = sim.risk_reduction;
+  const { percentage, by_group: byGroup } = sim.risk_reduction;
 
   const brokenIds = new Set(sim.broken_paths.map((b) => b.finding_id));
   const attacks = base.attacks.filter((a) => brokenIds.has(a.id));
@@ -614,6 +614,7 @@ export function toSolutionResult(
         criticalCount: sim.after.critical_count,
         maxScore: sim.after.max_score,
         riskReductionPct: Math.round(percentage),
+        riskReductionByGroupPct: Math.round(byGroup.percentage),
       },
     },
     nodes: toGraphNodes(sim.graph.nodes),

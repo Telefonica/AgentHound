@@ -14,14 +14,13 @@ import {
   skinVars,
   useTheme,
 } from "@telefonica/mistica";
-import { groupFindings, routeSummary, type FindingPattern } from "@/lib/results/findingDisplay";
+import { ShowMoreOccurrences, useCappedOccurrences } from "@/components/threat-model/CappedOccurrences";
+import { capped, groupFindings, routeSummary, type FindingPattern, type NodesById } from "@/lib/results/findingDisplay";
+import { usePatternTitle } from "@/lib/results/usePatternTitle";
 import { severityAccentColor } from "@/lib/threatModelColors";
-import type { Finding, GraphNode } from "@/types/ThreatModel";
+import type { Finding } from "@/types/ThreatModel";
 
 export const VISIBLE_GROUPS = 5;
-export const VISIBLE_OCCURRENCES = 10;
-
-type NodesById = Map<string, Pick<GraphNode, "label" | "type">>;
 
 interface PrioritizedFindingsProps {
   findings: Finding[];
@@ -37,20 +36,6 @@ const rowStyle = (highlighted: boolean) => ({
   borderRadius: skinVars.borderRadii.container,
   background: highlighted ? skinVars.colors.brandLow : undefined,
 });
-
-function capped<T>(items: T[], limit: number, holdsSelection: (item: T) => boolean): T[] {
-  return items.filter((item, i) => i < limit || holdsSelection(item));
-}
-
-function usePatternTitle(nodesById: NodesById) {
-  const t = useTranslations("results");
-  return (finding: Finding) => {
-    const anchorId = finding.groupAnchor;
-    if (!anchorId) return finding.title;
-    const key = nodesById.get(anchorId)?.type === "input" ? "findingGroupFrom" : "findingGroupAt";
-    return t(key, { title: finding.title, node: routeSummary([anchorId], nodesById) });
-  };
-}
 
 interface FindingRowProps {
   finding: Finding;
@@ -97,12 +82,11 @@ interface GroupRowsProps {
 function GroupRows({ group, expanded, onToggle, findingLabelById, nodesById, selectedFindingId, isDarkMode, onSelectFinding }: GroupRowsProps) {
   const t = useTranslations("results");
   const contentId = useId();
-  const [showAll, setShowAll] = useState(false);
+  const { visible, showAll, toggleShowAll } = useCappedOccurrences(group.findings, selectedFindingId);
   const patternTitle = usePatternTitle(nodesById);
   const [top] = group.findings;
   const title = patternTitle(top);
   const holdsSelection = group.findings.some((f) => f.id === selectedFindingId);
-  const visible = showAll ? group.findings : capped(group.findings, VISIBLE_OCCURRENCES, (f) => f.id === selectedFindingId);
   const Chevron = expanded ? IconChevronUpRegular : IconChevronDownRegular;
   return (
     <Stack space={2}>
@@ -110,7 +94,7 @@ function GroupRows({ group, expanded, onToggle, findingLabelById, nodesById, sel
         onPress={() => onToggle(group.id)}
         dataAttributes={{ testid: "prioritized-finding-group" }}
         aria-expanded={expanded}
-        aria-controls={contentId}
+        aria-controls={expanded ? contentId : undefined}
         aria-description={holdsSelection && !expanded ? t("findingGroupHoldsSelection") : undefined}
         style={rowStyle(holdsSelection && !expanded)}
       >
@@ -139,15 +123,14 @@ function GroupRows({ group, expanded, onToggle, findingLabelById, nodesById, sel
                 onSelect={onSelectFinding}
               />
             ))}
-            {group.findings.length > VISIBLE_OCCURRENCES && (
-              <Box paddingX={8}>
-                <ButtonLink small bleedLeft aria-expanded={showAll} aria-controls={contentId} onPress={() => setShowAll((v) => !v)}>
-                  {showAll
-                    ? t("showTopFindingGroups", { count: VISIBLE_OCCURRENCES })
-                    : t("showMoreOccurrences", { count: group.findings.length - visible.length })}
-                </ButtonLink>
-              </Box>
-            )}
+            <ShowMoreOccurrences
+              total={group.findings.length}
+              visibleCount={visible.length}
+              showAll={showAll}
+              onToggle={toggleShowAll}
+              controls={contentId}
+              paddingX={8}
+            />
           </Stack>
         </Box>
       )}

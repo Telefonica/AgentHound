@@ -73,7 +73,7 @@ test.describe("Prioritized findings at scale", () => {
 
     await box(page).getByRole("button", { name: "Ver 14 más" }).click();
     await expect(rows(page).filter({ hasText: /^FH-011 #/ })).toHaveCount(24);
-    await box(page).getByRole("button", { name: "Ver solo los 10 primeros" }).click();
+    await box(page).getByRole("button", { name: "Ver solo las 10 primeras" }).click();
     await expect(rows(page).filter({ hasText: /^FH-011 #/ })).toHaveCount(10);
 
     const occurrence = rows(page).filter({ hasText: /^FH-011 #2(?!\d)/ });

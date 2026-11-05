@@ -36,6 +36,10 @@ async function openAttackGroup(page: Page) {
   await page.getByRole("button", { name: /Rutas de ataque/ }).click();
 }
 
+async function openPattern(page: Page, ruleId: string) {
+  await page.getByTestId("finding-pattern").filter({ hasText: ruleId }).getByRole("button", { name: /ocurrencias/ }).click();
+}
+
 test.beforeEach(async ({ page, context, baseURL }) => {
   await context.addCookies([{ name: "agenthound-lang", value: "es", url: baseURL! }]);
   await mockOpsDestructiveAnalysis(page);
@@ -110,6 +114,7 @@ test.describe("Finding route highlight", () => {
   test("shows the selected accordion card", async ({ page }) => {
     await openResults(page);
     await openAttackGroup(page);
+    await openPattern(page, "FH-011");
 
     await card(page, "FH-011 #2").click();
 

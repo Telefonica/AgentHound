@@ -4,7 +4,7 @@ import ResultsStep from "@/components/threat-model/ResultsStep";
 import type { AnalysisResult } from "@/lib/api/adapters";
 import type CapabilityGraph from "@/components/threat-model/CapabilityGraph";
 import { mount, press } from "../test-utils";
-import { edges, nodes, result } from "./fixtures";
+import { edges, findings, nodes, result } from "./fixtures";
 
 type GraphProps = ComponentProps<typeof CapabilityGraph>;
 
@@ -26,15 +26,118 @@ beforeEach(() => {
 
 afterEach(() => view.unmount());
 
+const toggles = () => Array.from(view.container.querySelectorAll<HTMLElement>("[aria-expanded]"));
+const attackHeader = () => toggles().find((el) => el.textContent?.includes("ataque"))!;
+const occurrencesToggle = () => toggles().find((el) => el.textContent?.includes("ocurrencias"))!;
+const pattern = () => view.container.querySelector("[data-testid=finding-pattern]");
+
 function openAttackGroup() {
-  const header = Array.from(view.container.querySelectorAll("[aria-expanded]")).find((el) =>
-    el.textContent?.includes("ataque"),
-  );
-  press(header!);
+  press(attackHeader());
+  press(occurrencesToggle());
 }
 
-const cards = () => Array.from(view.container.querySelectorAll<HTMLButtonElement>("button[aria-description]"));
+const cards = () => Array.from(view.container.querySelectorAll<HTMLButtonElement>("[data-testid=finding-card]"));
 const cardFor = (label: string) => cards().find((b) => b.textContent?.includes(label));
+
+describe("ResultsStep — finding patterns", () => {
+  beforeEach(() => press(attackHeader()));
+
+  it("counts causes, not occurrences, in the group header", () => {
+    expect(attackHeader().textContent).toContain("2 causas");
+  });
+
+  it("folds the occurrences of one cause into a single card", () => {
+    expect(pattern()!.textContent).toContain("2 hallazgos");
+    expect(pattern()!.textContent).toContain("Datos sensibles alcanzables desde entrada no confiable desde Email entrante");
+    expect(cardFor("FH-001 #1")).toBeUndefined();
+    expect(cardFor("FH-004")).toBeDefined();
+  });
+
+  it("lists every occurrence with its own label once expanded, and folds them back", () => {
+    press(occurrencesToggle());
+    expect(occurrencesToggle().getAttribute("aria-expanded")).toBe("true");
+    expect(cardFor("FH-001 #1")).toBeDefined();
+    expect(cardFor("FH-001 #2")).toBeDefined();
+
+    press(occurrencesToggle());
+    expect(cardFor("FH-001 #1")).toBeUndefined();
+  });
+
+  it("leaves the cause's title to the pattern card, not to each occurrence", () => {
+    press(occurrencesToggle());
+
+    expect(cardFor("FH-001 #1")!.textContent).not.toContain("Datos sensibles alcanzables");
+    expect(cardFor("FH-004")!.textContent).toContain("Escritura en logs");
+  });
+
+  it("only points at the occurrences while they are in the page", () => {
+    expect(occurrencesToggle().hasAttribute("aria-controls")).toBe(false);
+
+    press(occurrencesToggle());
+    const id = occurrencesToggle().getAttribute("aria-controls");
+    expect(id && view.container.querySelector(`[id="${id}"]`)).toBeTruthy();
+  });
+
+  it("unfolds a cause when the graph selects one of its occurrences", () => {
+    act(() => graph.props?.onSelectFinding("f2"));
+
+    expect(occurrencesToggle().getAttribute("aria-expanded")).toBe("true");
+    expect(occurrencesToggle().hasAttribute("aria-description")).toBe(false);
+    expect(cardFor("FH-001 #2")!.getAttribute("aria-current")).toBe("true");
+  });
+
+  it("lets the user fold a cause back and marks that it holds the selection", () => {
+    act(() => graph.props?.onSelectFinding("f2"));
+    press(occurrencesToggle());
+
+    expect(cardFor("FH-001 #2")).toBeUndefined();
+    expect(occurrencesToggle().getAttribute("aria-description")).toBe("Contiene el hallazgo seleccionado");
+  });
+
+  it("leaves a cause folded when the selection lands elsewhere", () => {
+    act(() => graph.props?.onSelectFinding("f3"));
+
+    expect(occurrencesToggle().getAttribute("aria-expanded")).toBe("false");
+  });
+});
+
+describe("ResultsStep — a cause with many occurrences", () => {
+  const many = Array.from({ length: 12 }, (_, i) => ({ ...findings[0]!, id: `o${i + 1}` }));
+  const moreToggle = () => toggles().find((el) => el.textContent?.includes("más") || el.textContent?.includes("primeras"))!;
+
+  beforeEach(() => {
+    view.render(<ResultsStep result={{ ...result, findings: many }} />);
+    press(attackHeader());
+  });
+
+  it("caps the unfolded occurrences and shows the rest on demand", () => {
+    press(occurrencesToggle());
+    expect(cards()).toHaveLength(10);
+    expect(moreToggle().textContent).toBe("Ver 2 más");
+
+    press(moreToggle());
+    expect(cards()).toHaveLength(12);
+
+    press(moreToggle());
+    expect(cards()).toHaveLength(10);
+    expect(moreToggle().textContent).toBe("Ver 2 más");
+  });
+
+  it("names the collapse after occurrences, not groups", () => {
+    press(occurrencesToggle());
+    press(moreToggle());
+
+    expect(moreToggle().textContent).toBe("Ver solo las 10 primeras");
+  });
+
+  it("keeps a selected occurrence past the cap visible", () => {
+    act(() => graph.props?.onSelectFinding("o12"));
+
+    expect(cards()).toHaveLength(11);
+    expect(cardFor("FH-001 #12")!.getAttribute("aria-current")).toBe("true");
+    expect(moreToggle().textContent).toBe("Ver 1 más");
+  });
+});
 
 describe("ResultsStep — finding cards", () => {
   it("labels duplicate rules with an ordinal and shows each route", () => {
@@ -159,7 +262,7 @@ describe("ResultsStep — resolved findings", () => {
             remediation: [],
             beforeAfter: {
               before: { findingCount: 4, criticalCount: 2, maxScore: 9.1, riskScoreTotal: 27.4 },
-              after: { findingCount: 0, criticalCount: 0, maxScore: 0, riskReductionPct: 100 },
+              after: { findingCount: 0, criticalCount: 0, maxScore: 0, riskReductionPct: 100, riskReductionByGroupPct: 80 },
             },
             nodes,
             edges,
@@ -187,6 +290,28 @@ describe("ResultsStep — resolved findings", () => {
       "Email entrante → Planner → Logs",
     ]));
     expect(texts).toContain("FH-001 #2");
+  });
+
+  it("shows the risk reduction with each cause counted once", () => {
+    const rows = Array.from(view.container.querySelectorAll("[data-testid=metric-row]"), (el) => el.textContent);
+
+    expect(rows).toContain("Reducción por causa-80%");
+  });
+
+  it("shows both risk reductions together as rows", () => {
+    const after = Array.from(view.container.querySelectorAll("[data-testid=before-after-card]"))[1]!;
+    const rows = Array.from(after.querySelectorAll("[data-testid=metric-row]"), (el) => el.textContent);
+
+    expect(rows.slice(-2)).toEqual(["Reducción por hallazgo-100%", "Reducción por causa-80%"]);
+  });
+
+  it("counts causes on both sides so the rows line up", () => {
+    const [before, after] = Array.from(view.container.querySelectorAll("[data-testid=before-after-card]"), (card) =>
+      Array.from(card.querySelectorAll("[data-testid=metric-row]"), (el) => el.textContent),
+    );
+
+    expect(before!.slice(0, 2)).toEqual(["Hallazgos4", "Causas3"]);
+    expect(after!.slice(0, 2)).toEqual(["Hallazgos0", "Causas2"]);
   });
 
   it("lists only the findings the simulation broke", () => {
