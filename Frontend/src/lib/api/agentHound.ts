@@ -12,6 +12,7 @@ import type {
   AnalyzeRequest,
   AnalyzeResponse,
   BackendGraph,
+  CapabilitiesResponse,
   ControlApplication,
   CreateAnalysisResponse,
   DeleteAnalysisResponse,
@@ -20,6 +21,11 @@ import type {
   RecommendationsResponse,
   SimulateControlsResponse,
 } from "./types";
+
+/** Every capability verb with the rules that check it (`GET /capabilities`). */
+export async function getCapabilities(): Promise<CapabilitiesResponse> {
+  return apiFetch<CapabilitiesResponse>("/capabilities");
+}
 
 /** List stored analyses, most recently uploaded first (`GET /analyses`). */
 export async function listAnalyses(): Promise<AnalysesListResponse> {

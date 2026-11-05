@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   Callout,
@@ -15,6 +15,7 @@ import AgentCapabilityCard from "@/components/threat-model/AgentCapabilityCard";
 import AgentEditModal from "@/components/threat-model/AgentEditModal";
 import CoverageWarnings from "@/components/threat-model/CoverageWarnings";
 import { groupByAgent } from "@/lib/agentCapabilities";
+import { preloadCapabilityRules } from "@/hooks/useCapabilityRules";
 import type { CoverageWarning } from "@/lib/api/types";
 import type { GraphEdge, GraphNode } from "@/types/ThreatModel";
 
@@ -31,6 +32,10 @@ function InferenceStep({ nodes, edges, warnings, framework, onNodesChange, onEdg
   const t = useTranslations("inference");
   const { agents } = useMemo(() => groupByAgent(nodes, edges), [nodes, edges]);
   const [editingAgentId, setEditingAgentId] = useState<string | null>(null);
+
+  useEffect(() => {
+    preloadCapabilityRules().catch(() => {});
+  }, []);
 
   const agentCount = agents.length;
   const isEditing = editingAgentId != null && agents.some((g) => g.agent.id === editingAgentId);
