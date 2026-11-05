@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import ContentLayout from "@/components/layout/ContentLayout";
+import DashboardPage from "@/components/layout/DashboardPage";
+import KpiCard from "@/components/ui/KpiCard";
 import {
   Box,
   Stack,
@@ -11,9 +12,7 @@ import {
   Grid,
   Spinner,
   Text2,
-  Text3,
   Text6,
-  Text8,
   Tabs,
   Boxed,
   RowList,
@@ -152,161 +151,124 @@ export default function Page() {
     },
   ] as const;
 
-  // The KPI cards sit across the top edge of the general container: this many
-  // pixels of each card stick out above it. The mockup has 45; 48 is the nearest
-  // step of Mistica's spacing scale, which is what Box padding accepts.
-  const KPI_OVERLAP = 48;
   const showKpis = !loading && !error;
 
+  const kpiRow = showKpis ? (
+    <Grid columns={4} gap={16}>
+      {kpis.map(({ key, value, severity, Icon }) => {
+        const style = severity ? SEVERITY_STYLES[severity] : null;
+        const color = style
+          ? isDarkMode
+            ? style.accentDark
+            : style.accentLight
+          : skinVars.colors.neutralHigh;
+        return (
+          <KpiCard
+            key={key}
+            Icon={Icon}
+            iconColor={style ? color : skinVars.colors.brand}
+            title={t(`kpis.${key}`)}
+            value={value}
+            valueColor={color}
+          />
+        );
+      })}
+    </Grid>
+  ) : undefined;
+
   return (
-    // The title sits 48 from the top like on the wizard, so the page starts at 0.
-    <ContentLayout paddingTop={0}>
-      <Box paddingX={32} paddingBottom={32}>
-        {/* From 1920px up the page stops at 1440px, the same cap as the wizard's
-            container. It lives on a plain wrapper because Mistica's own (unlayered)
-            styles win over a utility class set on its components. */}
-        <div className="w-full min-[1920px]:max-w-[1440px]">
-          <Box paddingTop={48} paddingBottom={40}>
-            <Inline space="between" alignItems="center">
-              <Text8 as="h1" color={skinVars.colors.neutralHigh}>
-                {t("title")}
-              </Text8>
-              <ButtonPrimary StartIcon={IconAddMoreRegular} onPress={goToNewThreatModel}>
-                {t("newThreatModel")}
-              </ButtonPrimary>
-            </Inline>
+    <DashboardPage
+      title={t("title")}
+      action={
+        <ButtonPrimary StartIcon={IconAddMoreRegular} onPress={goToNewThreatModel}>
+          {t("newThreatModel")}
+        </ButtonPrimary>
+      }
+      kpis={kpiRow}
+    >
+      <Stack space={16}>
+        <Box width={145}>
+          <Tabs selectedIndex={tab} onChange={setTab} tabs={[{ text: t("listTitle") }]} />
+        </Box>
+        {loading ? (
+          <Box paddingY={48}>
+            <Align x="center">
+              <Spinner size={32} color={skinVars.colors.brand} />
+            </Align>
           </Box>
-
-          {/* Two layers share one grid cell: the container (a Boxed, which clips
-              whatever pokes out of it) and, over it, the content. The content is
-              taller than the container by KPI_OVERLAP, so the KPI cards cross its
-              top edge, and they stay 40 under the title like anything that follows
-              the header. Mistica has no layering primitive, hence the plain divs. */}
-          <div style={{ display: "grid" }}>
-            <div
-              aria-hidden="true"
-              style={{ gridArea: "1 / 1", display: "grid", paddingTop: showKpis ? KPI_OVERLAP : 0 }}
-            >
-              <Boxed width="100%">{null}</Boxed>
-            </div>
-            <div style={{ gridArea: "1 / 1", position: "relative" }}>
-              <Box paddingX={32} paddingTop={showKpis ? 0 : 40} paddingBottom={40}>
-                <Stack space={40}>
-                  {showKpis && (
-                    <Grid columns={4} gap={16}>
-                      {kpis.map(({ key, value, severity, Icon }) => {
-                        const style = severity ? SEVERITY_STYLES[severity] : null;
-                        const color = style
-                          ? isDarkMode
-                            ? style.accentDark
-                            : style.accentLight
-                          : skinVars.colors.neutralHigh;
-                        return (
-                          <Boxed key={key} width="100%" height="100%">
-                            <Box padding={24}>
-                              <Stack space={16}>
-                                <Icon size={24} color={style ? color : skinVars.colors.brand} />
-                                <Text3 medium color={skinVars.colors.neutralHigh}>
-                                  {t(`kpis.${key}`)}
-                                </Text3>
-                                <Text8 color={color}>{value}</Text8>
-                              </Stack>
-                            </Box>
-                          </Boxed>
-                        );
-                      })}
-                    </Grid>
-                  )}
-
-                  <Stack space={16}>
-                    <Box width={145}>
-                      <Tabs selectedIndex={tab} onChange={setTab} tabs={[{ text: t("listTitle") }]} />
-                    </Box>
-                    {loading ? (
-                      <Box paddingY={48}>
-                        <Align x="center">
-                          <Spinner size={32} color={skinVars.colors.brand} />
-                        </Align>
-                      </Box>
-                    ) : error ? (
-                      <InlineError message={t("loadError")} onRetry={retry} />
-                    ) : models.length === 0 ? (
-                      <Boxed>
-                        <Box padding={24}>
-                          <Stack space={32}>
-                            <Stack space={16}>
-                              <Text6>{t("emptyTitle")}</Text6>
-                              <Box width={485}>
-                                <Text2 regular color={skinVars.colors.textSecondary}>
-                                  {t("description")}
+        ) : error ? (
+          <InlineError message={t("loadError")} onRetry={retry} />
+        ) : models.length === 0 ? (
+          <Boxed>
+            <Box padding={24}>
+              <Stack space={32}>
+                <Stack space={16}>
+                  <Text6>{t("emptyTitle")}</Text6>
+                  <Box width={485}>
+                    <Text2 regular color={skinVars.colors.textSecondary}>
+                      {t("description")}
+                    </Text2>
+                  </Box>
+                </Stack>
+                <ButtonSecondary StartIcon={IconAddMoreFilled} onPress={goToNewThreatModel}>
+                  {t("newThreatModel")}
+                </ButtonSecondary>
+              </Stack>
+            </Box>
+          </Boxed>
+        ) : (
+          <Stack space={24}>
+            <Boxed>
+              <Box paddingX={8} paddingY={8}>
+                <RowList>
+                  {pagedModels.map((model) => {
+                    const style = SEVERITY_STYLES[model.severity];
+                    return (
+                      <Row
+                        key={model.id}
+                        title={model.name}
+                        description={`${model.framework} · ${formatDate(model.uploadedAt)}`}
+                        right={
+                          <Align y="center" height="100%">
+                            <Inline space={8} alignItems="center">
+                              <Box width={20}>
+                                <Text2
+                                  medium
+                                  color={isDarkMode ? style.accentDark : style.accentLight}
+                                  textAlign="right"
+                                >
+                                  {model.findings > 0 ? model.findings : ""}
                                 </Text2>
                               </Box>
-                            </Stack>
-                            <ButtonSecondary StartIcon={IconAddMoreFilled} onPress={goToNewThreatModel}>
-                              {t("newThreatModel")}
-                            </ButtonSecondary>
-                          </Stack>
-                        </Box>
-                      </Boxed>
-                    ) : (
-                      <Stack space={24}>
-                        <Boxed>
-                          <Box paddingX={8} paddingY={8}>
-                            <RowList>
-                              {pagedModels.map((model) => {
-                                const style = SEVERITY_STYLES[model.severity];
-                                return (
-                                  <Row
-                                    key={model.id}
-                                    title={model.name}
-                                    description={`${model.framework} · ${formatDate(model.uploadedAt)}`}
-                                    right={
-                                      <Align y="center" height="100%">
-                                        <Inline space={8} alignItems="center">
-                                          <Box width={20}>
-                                            <Text2
-                                              medium
-                                              color={isDarkMode ? style.accentDark : style.accentLight}
-                                              textAlign="right"
-                                            >
-                                              {model.findings > 0 ? model.findings : ""}
-                                            </Text2>
-                                          </Box>
-                                          <SeverityBadge severity={model.severity} withIcon>
-                                            {t(`severity.${model.severity}`)}
-                                          </SeverityBadge>
-                                        </Inline>
-                                      </Align>
-                                    }
-                                    // `iconButton` renders the action outside the row's touchable
-                                    // (Mistica's dual-action row), so the delete button isn't a
-                                    // <button> nested inside the row's own <button>.
-                                    iconButton={{
-                                      Icon: IconTrashCanRegular,
-                                      type: "danger",
-                                      backgroundType: "transparent",
-                                      "aria-label": t("delete.action", { name: model.name }),
-                                      onPress: () => requestDelete(model),
-                                    }}
-                                    onPress={() => router.push(`/tests/${model.id}`)}
-                                  />
-                                );
-                              })}
-                            </RowList>
-                          </Box>
-                        </Boxed>
-                        <Align x="start">
-                          <Pagination currentPage={safePage} totalPages={totalPages} onPageChange={setPage} />
-                        </Align>
-                      </Stack>
-                    )}
-                  </Stack>
-                </Stack>
+                              <SeverityBadge severity={model.severity} withIcon>
+                                {t(`severity.${model.severity}`)}
+                              </SeverityBadge>
+                            </Inline>
+                          </Align>
+                        }
+                        // `iconButton` renders the action outside the row's touchable
+                        // (Mistica's dual-action row), so the delete button isn't a
+                        // <button> nested inside the row's own <button>.
+                        iconButton={{
+                          Icon: IconTrashCanRegular,
+                          type: "danger",
+                          backgroundType: "transparent",
+                          "aria-label": t("delete.action", { name: model.name }),
+                          onPress: () => requestDelete(model),
+                        }}
+                        onPress={() => router.push(`/tests/${model.id}`)}
+                      />
+                    );
+                  })}
+                </RowList>
               </Box>
-            </div>
-          </div>
-        </div>
-      </Box>
-    </ContentLayout>
+            </Boxed>
+            <Align x="start">
+              <Pagination currentPage={safePage} totalPages={totalPages} onPageChange={setPage} />
+            </Align>
+          </Stack>
+        )}
+      </Stack>
+    </DashboardPage>
   );
 }
