@@ -2,12 +2,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ProgressBarStepped, Text8, skinVars } from "@telefonica/mistica";
+import { Text8, skinVars } from "@telefonica/mistica";
 import ConfigurationStep from "@/components/threat-model/ConfigurationStep";
 import ProcessingStep from "@/components/threat-model/ProcessingStep";
 import InferenceStep from "@/components/threat-model/InferenceStep";
 import ResultsStep from "@/components/threat-model/ResultsStep";
 import WizardFooter from "@/components/threat-model/WizardFooter";
+import WizardStepper from "@/components/threat-model/WizardStepper";
 import { PROVIDERS, YAML_COUNT } from "@/lib/threatModelData";
 import { buildCrewaiUpload } from "@/lib/crewai";
 import { analyze, createAnalysis, getGraph } from "@/lib/api/agentHound";
@@ -24,7 +25,6 @@ import InlineError from "@/components/ui/InlineError";
 import { logger } from "@/lib/logger";
 import type { GraphEdge, GraphNode, WizardPhase } from "@/types/ThreatModel";
 
-const STEP_COUNT = 4;
 const STEP_INDEX: Record<WizardPhase, number> = {
   configuration: 1,
   processing: 2,
@@ -42,6 +42,12 @@ function NewThreatModelScreen() {
   const tWizard = useTranslations("wizard");
   const tConfiguration = useTranslations("configuration");
   const tInference = useTranslations("inference");
+  const stepLabels = [
+    tWizard("steps.configuration"),
+    tWizard("steps.analysis"),
+    tWizard("steps.capabilities"),
+    tWizard("steps.results"),
+  ];
   const [phase, setPhase] = useState<WizardPhase>("configuration");
   const [name, setName] = useState("");
   const [provider, setProvider] = useState(PROVIDERS[0]?.value ?? "crewai");
@@ -204,7 +210,7 @@ function NewThreatModelScreen() {
           {/* Processing is its own step (Analyzing), between Configuration and the
               Agents step, so the stepper and footer stay visible like any step. */}
           {heading}
-          <ProgressBarStepped steps={STEP_COUNT} currentStep={STEP_INDEX[phase]} aria-label={tWizard("progressLabel")} />
+          <WizardStepper steps={stepLabels} currentStep={STEP_INDEX[phase]} aria-label={tWizard("progressLabel")} />
           <ProcessingStep
             requestDone={requestDone}
             error={analysisError}
@@ -222,7 +228,7 @@ function NewThreatModelScreen() {
       ) : (
         <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, paddingTop: 24, paddingLeft: 32, paddingRight: 32, paddingBottom: 32, gap: 32 }}>
           {heading}
-          <ProgressBarStepped steps={STEP_COUNT} currentStep={STEP_INDEX[phase]} aria-label={tWizard("progressLabel")} />
+          <WizardStepper steps={stepLabels} currentStep={STEP_INDEX[phase]} aria-label={tWizard("progressLabel")} />
 
           {phase === "configuration" && (
             <ConfigurationStep

@@ -79,6 +79,8 @@
     "progressLabel": "Progreso de creación de la prueba",
     "steps": {
       "configuration": "Configuración",
+      "analysis": "Análisis",
+      "capabilities": "Capacidades",
       "inference": "Inferencia",
       "results": "Resultados"
     }

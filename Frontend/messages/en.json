@@ -79,6 +79,8 @@
     "progressLabel": "Test creation progress",
     "steps": {
       "configuration": "Configuration",
+      "analysis": "Analysis",
+      "capabilities": "Capabilities",
       "inference": "Inference",
       "results": "Results"
     }
