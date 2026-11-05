@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
+  Align,
   ButtonSecondary,
   DoubleField,
   FileUpload,
@@ -60,7 +61,12 @@ function YamlUploadField({ title, description, onFiles }: YamlUploadFieldProps) 
     <FileUpload
       accept=".yaml,.yml"
       withDropZone
-      asset={<IconExportRegular size={24} color={skinVars.colors.brand} />}
+      // The dropzone centres its text but leaves the asset at the start; Align puts the icon over it.
+      asset={
+        <Align x="center">
+          <IconExportRegular size={24} color={skinVars.colors.brand} />
+        </Align>
+      }
       title={title}
       description={description}
       renderButton={({ onPress, small, disabled }) => (
