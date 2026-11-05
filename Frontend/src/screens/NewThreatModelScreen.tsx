@@ -330,7 +330,7 @@ function NewThreatModelScreen() {
           {heading}
           {stepper}
 
-          <ResultsStep result={result} hideTitle />
+          <ResultsStep result={result} hideTitle stepTitle={tWizard("steps.results")} />
 
           <WizardFooter onPrevious={handlePrevious} onNext={handleNext} hideNext />
         </div>

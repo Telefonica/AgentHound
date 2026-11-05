@@ -15,10 +15,10 @@ import {
   Text1,
   Text2,
   Text3,
-  Text5,
   Text6,
   skinVars,
 } from "@telefonica/mistica";
+import StepSection from "@/components/threat-model/StepSection";
 import { REASONING } from "@/lib/threatModelData";
 
 const STEP_INTERVAL_MS = 640;
@@ -83,31 +83,28 @@ function ProcessingStep({ requestDone, error, onRetry, onComplete }: ProcessingS
     onRetry();
   };
 
-  // Rendered inside the wizard's container. Spacing follows the design: 8 between
-  // title and paragraph, 24 down to the progress card. The card holds both the
-  // progress summary and the reasoning log, 32 apart.
+  // Rendered inside the wizard's container. The header and the 32 gap to the
+  // content come from StepSection; the progress card holds both the progress
+  // summary and the reasoning log, 32 apart.
   return (
-    <Stack space={24}>
-      <Stack space={8}>
-        <Text5 as="h2">{t("heading")}</Text5>
-        <Text3 regular as="p" color={skinVars.colors.textSecondary}>
-          {error ? t("errorTitle") : complete ? t("doneTitle") : t("title")}
-        </Text3>
-      </Stack>
-
-      {error && (
-        <Callout
-          variant="default"
-          title={t("errorTitle")}
-          description={error}
-          asset={<IconAlertFilled color={skinVars.colors.error} />}
-          button={
-            <ButtonPrimary small onPress={handleRetry}>
-              {tCommon("actions.retry")}
-            </ButtonPrimary>
-          }
-        />
-      )}
+    <StepSection
+      title={t("heading")}
+      description={error ? t("errorTitle") : complete ? t("doneTitle") : t("title")}
+    >
+      <Stack space={24}>
+        {error && (
+          <Callout
+            variant="default"
+            title={t("errorTitle")}
+            description={error}
+            asset={<IconAlertFilled color={skinVars.colors.error} />}
+            button={
+              <ButtonPrimary small onPress={handleRetry}>
+                {tCommon("actions.retry")}
+              </ButtonPrimary>
+            }
+          />
+        )}
 
       <Boxed>
         <Box paddingX={32} paddingY={32}>
@@ -159,7 +156,8 @@ function ProcessingStep({ requestDone, error, onRetry, onComplete }: ProcessingS
           </Stack>
         </Box>
       </Boxed>
-    </Stack>
+      </Stack>
+    </StepSection>
   );
 }
 

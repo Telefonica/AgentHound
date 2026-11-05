@@ -8,12 +8,11 @@ import {
   Select,
   Stack,
   Text1,
-  Text3,
-  Text5,
   TextField,
   skinVars,
 } from "@telefonica/mistica";
 import FileBox from "@/components/ui/FileBox";
+import StepSection from "@/components/threat-model/StepSection";
 import { PROVIDERS, YAML_COUNT } from "@/lib/threatModelData";
 
 /**
@@ -132,17 +131,10 @@ function ConfigurationStep({
 
   // The step renders straight onto the wizard's container (the screen wraps the
   // stepper and this content in a single Boxed), so there are no inner boxes.
-  // Spacing follows the design: 8 between title and paragraph, 40 down to the
-  // fields, 32 between the fields and the upload zones.
+  // The header and the 32 gap to the content come from StepSection; the fields
+  // and the upload zones are 32 apart.
   return (
-    <Stack space={40}>
-      <Stack space={8}>
-        <Text5 as="h2">{t("heading")}</Text5>
-        <Text3 regular as="p" color={skinVars.colors.textSecondary}>
-          {t("subtitle")}
-        </Text3>
-      </Stack>
-
+    <StepSection title={t("heading")} description={t("subtitle")}>
       <Stack space={32}>
         <DoubleField layout="50/50" fullWidth>
           <TextField
@@ -199,7 +191,7 @@ function ConfigurationStep({
           )}
         </Stack>
       </Stack>
-    </Stack>
+    </StepSection>
   );
 }
 
