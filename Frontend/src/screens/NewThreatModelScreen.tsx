@@ -241,15 +241,15 @@ function NewThreatModelScreen() {
       {name.trim() || tWizard("untitled")}
     </Text8>
   );
-  // From the Analysis step on (steps 2 and 3) the test already exists, so the
-  // title gets a pencil that opens the rename dialog.
+  // From the Analysis step on the test already exists, so the title gets a
+  // pencil that opens the rename dialog.
   const editableHeading = (
     <Inline space={16} alignItems="center" expand={1}>
       {title}
       <RenameTestButton name={name} onRename={setName} />
     </Inline>
   );
-  const heading = phase === "processing" || phase === "inference" ? editableHeading : title;
+  const heading = phase === "configuration" ? title : editableHeading;
 
   return (
     <div ref={rootRef} style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
@@ -326,14 +326,13 @@ function NewThreatModelScreen() {
           </Stack>
         </ContainedStep>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, paddingTop: 24, paddingLeft: 32, paddingRight: 32, paddingBottom: 32, gap: 32 }}>
-          {heading}
-          {stepper}
-
+        <ContainedStep
+          heading={heading}
+          stepper={stepper}
+          footer={<WizardFooter onPrevious={handlePrevious} onNext={handleNext} hideNext />}
+        >
           <ResultsStep result={result} hideTitle stepTitle={tWizard("steps.results")} />
-
-          <WizardFooter onPrevious={handlePrevious} onNext={handleNext} hideNext />
-        </div>
+        </ContainedStep>
       )}
     </div>
   );
