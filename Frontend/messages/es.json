@@ -183,6 +183,7 @@
     "playRoute": "Reproducir {id}",
     "stopAttack": "Detener",
     "fitView": "Ajustar",
+    "minimap": "Vista general del grafo",
     "fullscreen": "Pantalla completa",
     "exitFullscreen": "Salir de pantalla completa",
     "legend": {

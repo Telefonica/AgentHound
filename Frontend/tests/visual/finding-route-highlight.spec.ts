@@ -65,6 +65,7 @@ test.describe("Finding route highlight", () => {
       els.filter((el) => el.scrollHeight > el.clientHeight + 1).map((el) => el.textContent),
     );
     expect(overflowing).toEqual([]);
+    await expect(canvas(page).locator(".react-flow__minimap")).toHaveCount(0);
     await expect(canvas(page)).toHaveScreenshot("graph-default.png");
     await expect(prioritized(page)).toHaveScreenshot("prioritized-list-fh-011-expanded.png");
   });

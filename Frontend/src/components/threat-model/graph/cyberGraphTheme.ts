@@ -73,7 +73,7 @@ export const cyber = {
   // Very faint neutral wash for icon boxes / secondary buttons.
   faintOverlay: applyAlpha(skinVars.rawColors.neutralHigh, 0.05),
   // Dim mask outside the minimap viewport.
-  overlay: skinVars.colors.backgroundOverlay,
+  overlay: applyAlpha(skinVars.rawColors.neutralHigh, 0.12),
   grid: skinVars.colors.border,
   gridStrong: skinVars.colors.borderHigh,
   laneBorder: skinVars.colors.border,

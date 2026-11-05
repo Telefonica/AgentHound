@@ -7,6 +7,7 @@ import {
   BackgroundVariant,
   ControlButton,
   Controls,
+  MiniMap,
   Panel,
   ReactFlow,
   ReactFlowProvider,
@@ -16,12 +17,13 @@ import {
   useNodesState,
   useReactFlow,
   useStore,
+  type Node,
 } from "@xyflow/react";
 import { toPng } from "html-to-image";
 import { Spinner, Tag, applyAlpha } from "@telefonica/mistica";
 import type { Attack, ControlInfo, Finding, GraphEdge, GraphNode, NodeType } from "@/types/ThreatModel";
 import { cyber, getSeverityPath, NODE_STYLE, useIsDarkMode, type PathSeverity } from "@/components/threat-model/graph/cyberGraphTheme";
-import { GLYPH, nodeTypes } from "@/components/threat-model/graph/nodeTypes";
+import { accentFor, GLYPH, nodeTypes } from "@/components/threat-model/graph/nodeTypes";
 import { edgeTypes, SeverityPathContext } from "@/components/threat-model/graph/edgeTypes";
 import { buildGraph, playbackFrame, primaryRouteId, type CyberNode, type FindingRoute } from "@/components/threat-model/graph/toReactFlow";
 import { dagreLayout } from "@/components/threat-model/graph/dagreLayout";
@@ -66,6 +68,7 @@ export interface CyberGraphProps {
     playRoute: (label: string) => string;
     stop: string;
     fit: string;
+    minimap: string;
     fullscreen: string;
     exitFullscreen: string;
     viewFindings: string;
@@ -121,6 +124,19 @@ const MAX_ZOOM = 2.5;
 const FIT_OPTIONS = { padding: 0.08, minZoom: 0 };
 const ROUTE_FIT_OPTIONS = { padding: 0.3, minZoom: 0, maxZoom: 1.2 };
 const fitDuration = () => (window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 400);
+const MINIMAP_MIN_NODES = 15;
+const MINIMAP_WIDTH = 200;
+const MINIMAP_HEIGHT = 150;
+const MINIMAP_MARGIN = 15;
+const MINIMAP_BORDER = 1;
+const MINIMAP_STYLE = { width: MINIMAP_WIDTH, height: MINIMAP_HEIGHT, margin: MINIMAP_MARGIN };
+const ROUTE_PANEL_GAP = 12;
+const ROUTE_PANEL_MIN_WIDTH = 440;
+const MINIMAP_CLEARANCE = MINIMAP_MARGIN + MINIMAP_WIDTH + 2 * MINIMAP_BORDER + ROUTE_PANEL_GAP;
+const MINIMAP_MIN_CANVAS_WIDTH = 2 * MINIMAP_CLEARANCE + ROUTE_PANEL_MIN_WIDTH;
+const ROUTE_PANEL_BESIDE_MINIMAP = { maxWidth: `calc(100% - ${2 * MINIMAP_CLEARANCE}px)` };
+const minimapNodeColor = (n: Node) => accentFor((n as CyberNode).data).accent;
+const minimapNodeClassName = (n: Node) => (n.className === "ch-dim" ? "ch-dim" : "");
 const TOOLBAR_CLEARANCE = 56;
 const TITLE_GAP = 12;
 
@@ -408,6 +424,8 @@ const Flow = forwardRef<CyberGraphHandle, CyberGraphProps>(function Flow(
   }, [getNodes]);
 
   const canPlay = !solved && !pendingRoute && playRoute.nodeIds.length > 0;
+  const canvasFitsMinimap = useStore((s) => s.width >= MINIMAP_MIN_CANVAS_WIDTH);
+  const showMinimap = canvasFitsMinimap && built.nodes.length >= MINIMAP_MIN_NODES;
 
   return (
     <div
@@ -475,6 +493,24 @@ const Flow = forwardRef<CyberGraphHandle, CyberGraphProps>(function Flow(
           </ControlButton>
         </Controls>
 
+        {showMinimap && (
+          <MiniMap
+            pannable
+            zoomable
+            ariaLabel={labels.minimap}
+            className="ch-minimap"
+            style={MINIMAP_STYLE}
+            bgColor={cyber.surface}
+            maskColor={cyber.overlay}
+            maskStrokeColor={cyber.gridStrong}
+            maskStrokeWidth={1}
+            nodeColor={minimapNodeColor}
+            nodeClassName={minimapNodeClassName}
+            nodeStrokeWidth={0}
+            nodeBorderRadius={6}
+          />
+        )}
+
         {isFullscreen && name && (
           <Panel position="top-center" style={{ marginTop: titleClash ? TOOLBAR_CLEARANCE : undefined, transition: "margin-top .2s ease" }}>
             <div ref={titleRef} style={fullscreenTitleBox} title={name} data-testid="fullscreen-title">
@@ -512,7 +548,7 @@ const Flow = forwardRef<CyberGraphHandle, CyberGraphProps>(function Flow(
         </Panel>
 
         {shownRoute && (
-          <Panel position="bottom-center">
+          <Panel position="bottom-center" style={showMinimap ? ROUTE_PANEL_BESIDE_MINIMAP : undefined}>
             <div style={highlightBox} role="status">
               <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
                 <span style={legendHeading}>{isPlaying ? labels.playingRoute : isolated ? labels.isolatedRoute : labels.highlightedRoute}</span>
@@ -782,7 +818,7 @@ const CYBER_CSS = `
 .react-flow__edge.ch-edge-flow path.react-flow__edge-path,
 .react-flow__edge-path.ch-edge-flow { animation: chDash .6s linear infinite; }
 @keyframes chDash { to { stroke-dashoffset: -28; } }
-.react-flow__node.ch-dim, .react-flow__edge.ch-dim { opacity: .22; }
+.react-flow__node.ch-dim, .react-flow__edge.ch-dim, .react-flow__minimap-node.ch-dim { opacity: .22; }
 .react-flow__viewport { transition: opacity .2s ease; }
 [data-ch-pending] .react-flow__viewport, [data-ch-pending] .react-flow__panel.bottom.center { opacity: .3; }
 .react-flow__node.ch-current .ch-node { transform: scale(1.09); box-shadow: 0 0 0 2px ${cyber.danger}, 0 0 34px 7px ${cyber.dangerGlow} !important; }
@@ -794,6 +830,7 @@ const CYBER_CSS = `
 .ch-controls button { background: ${cyber.surface}; border-bottom: 1px solid ${cyber.laneBorder}; color: ${cyber.textPrimary}; }
 .ch-controls button:hover { background: ${cyber.surfaceHover}; }
 .ch-controls button svg { fill: ${cyber.textPrimary}; }
+.ch-minimap { box-sizing: content-box; border: ${MINIMAP_BORDER}px solid ${cyber.laneBorder}; border-radius: 8px; overflow: hidden; }
 
 /* ---- agent "reactor core" hero node -------------------------------------- */
 @property --ch-angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }

@@ -3,9 +3,11 @@ import { mockOpsDestructiveAnalysis, OPS_DESTRUCTIVE_ID } from "./mocks";
 
 const pattern = (page: Page, ruleId: string) => page.getByTestId("finding-pattern").filter({ hasText: ruleId });
 const occurrences = (page: Page, ruleId: string) => pattern(page, ruleId).getByRole("button", { name: /ocurrencias/ });
+const graphDrawn = (page: Page) => page.locator("[data-ch-canvas] .react-flow__node").first().waitFor();
 
 async function openAttackGroup(page: Page) {
   await page.goto(`/tests/${OPS_DESTRUCTIVE_ID}`);
+  await graphDrawn(page);
   await page.getByRole("button", { name: /Rutas de ataque/ }).click();
   await pattern(page, "FH-011").waitFor();
   await page.evaluate(() => document.fonts.ready);
@@ -29,6 +31,7 @@ test.describe("Finding patterns", () => {
   test("unfolds the occurrences of a cause with their own label and route", async ({ page }) => {
     await openAttackGroup(page);
     await occurrences(page, "FH-011").click();
+    await page.mouse.move(0, 0);
 
     await expect(occurrences(page, "FH-011")).toHaveAttribute("aria-expanded", "true");
     await expect(pattern(page, "FH-011").getByTestId("finding-card")).toHaveCount(2);
@@ -59,11 +62,13 @@ test.describe("Finding patterns", () => {
     await page.goto(`/tests/${OPS_DESTRUCTIVE_ID}`);
     await page.getByRole("tab", { name: "Solución propuesta" }).click();
     await page.getByTestId("before-after").waitFor();
+    await graphDrawn(page);
     await page.evaluate(() => document.fonts.ready);
 
-    const [before, after] = await page.getByTestId("before-after-card").all();
-    const rowTops = (card: typeof before) => card!.getByTestId("metric-row").evaluateAll((rows) => rows.map((r) => r.getBoundingClientRect().top));
-    const [beforeTops, afterTops] = [await rowTops(before), await rowTops(after)];
+    const [beforeTops = [], afterTops = []] = await page.getByTestId("before-after-card").evaluateAll((cards) =>
+      cards.map((card) => [...card.querySelectorAll("[data-testid=metric-row]")].map((r) => r.getBoundingClientRect().top)),
+    );
+    expect(beforeTops.length).toBeGreaterThan(0);
     expect(afterTops.slice(0, beforeTops.length)).toEqual(beforeTops);
     await expect(page.getByTestId("before-after")).toHaveScreenshot("before-after.png");
   });

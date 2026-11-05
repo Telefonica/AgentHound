@@ -183,6 +183,7 @@
     "playRoute": "Play {id}",
     "stopAttack": "Stop",
     "fitView": "Fit",
+    "minimap": "Graph overview",
     "fullscreen": "Fullscreen",
     "exitFullscreen": "Exit fullscreen",
     "legend": {

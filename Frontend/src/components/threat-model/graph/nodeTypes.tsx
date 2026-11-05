@@ -82,7 +82,7 @@ export function NodeFindingCorner({ mark }: { mark: NodeFindingMark }) {
 
 /* ---- node ------------------------------------------------------------------ */
 
-function accentFor(node: CyberNode["data"]) {
+export function accentFor(node: CyberNode["data"]) {
   const { gnode } = node;
   const base = NODE_STYLE[gnode.type];
   if (gnode.type === "data") {
