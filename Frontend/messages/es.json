@@ -85,7 +85,8 @@
       "fieldLabel": "nombre de la prueba*",
       "update": "Actualizar",
       "cancel": "Cancelar",
-      "close": "Cerrar el cuadro de nombre"
+      "close": "Cerrar el cuadro de nombre",
+      "error": "No se ha podido guardar el nuevo nombre. La prueba mantiene el nombre anterior."
     },
     "steps": {
       "configuration": "Configuración",

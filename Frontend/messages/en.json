@@ -85,7 +85,8 @@
       "fieldLabel": "test name*",
       "update": "Update",
       "cancel": "Cancel",
-      "close": "Close rename dialog"
+      "close": "Close rename dialog",
+      "error": "The new name could not be saved. The test keeps its previous name."
     },
     "steps": {
       "configuration": "Configuration",

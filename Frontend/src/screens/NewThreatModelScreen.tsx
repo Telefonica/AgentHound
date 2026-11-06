@@ -13,6 +13,7 @@ import RenameTestButton from "@/components/threat-model/RenameTestButton";
 import { PROVIDERS, YAML_COUNT } from "@/lib/threatModelData";
 import { buildCrewaiUpload } from "@/lib/crewai";
 import { analyze, createAnalysis, getGraph } from "@/lib/api/agentHound";
+import { useAnalysisName } from "@/hooks/useAnalysisName";
 import { loadSolution } from "@/lib/api/loadAnalysis";
 import {
   toAnalyzeRequest,
@@ -92,7 +93,15 @@ function NewThreatModelScreen() {
     tWizard("steps.results"),
   ];
   const [phase, setPhase] = useState<WizardPhase>("configuration");
-  const [name, setName] = useState("");
+  const {
+    name,
+    getName,
+    setName,
+    rename: renameTest,
+    attach: attachName,
+    detach: detachName,
+    saveFailed: renameFailed,
+  } = useAnalysisName();
   const [provider, setProvider] = useState(PROVIDERS[0]?.value ?? "crewai");
   const [showValidation, setShowValidation] = useState(false);
   // Uploads keyed by field ("workflow" for single-file frameworks; "agents" +
@@ -143,6 +152,7 @@ function NewThreatModelScreen() {
   const parseArchitecture = useCallback(async () => {
     setResult(null);
     setAnalysisId(null);
+    detachName();
     setRequestDone(false);
     setProcessingComplete(false);
     setAnalysisError(null);
@@ -166,7 +176,10 @@ function NewThreatModelScreen() {
     }
     const framework = BACKEND_FRAMEWORKS.has(provider) ? provider : undefined;
     try {
-      const created = await createAnalysis(file, { framework, name });
+      const created = await createAnalysis(file, { framework, name: getName() });
+      // From here on renames are saved, and one made while the parse ran is
+      // saved now.
+      attachName(created.analysis_id, created.name);
       const graph = await getGraph(created.analysis_id);
       setAnalysisId(created.analysis_id);
       setInferenceNodes(toGraphNodes(graph.nodes));
@@ -180,7 +193,7 @@ function NewThreatModelScreen() {
         err instanceof ApiError || err instanceof Error ? err.message : "Parsing failed.";
       setAnalysisError(message);
     }
-  }, [filesByField, files, provider, name]);
+  }, [filesByField, files, provider, getName, attachName, detachName]);
 
   // Stage 2 (leaving Inference for Results): run the analysis if it has not run
   // yet, or re-run it if the capabilities changed since the last run; otherwise
@@ -246,6 +259,11 @@ function NewThreatModelScreen() {
     else close();
   };
 
+  // The results (and the reports exported from them) carry the header's name,
+  // not the one in the analyze response, which a rename sent while the
+  // analysis ran can make out of date.
+  const shownResult = useMemo(() => (result ? { ...result, name: name.trim() || result.name } : null), [result, name]);
+
   const stepper = <WizardStepper steps={stepLabels} currentStep={STEP_INDEX[phase]} aria-label={tWizard("progressLabel")} />;
 
   const title = (
@@ -255,11 +273,22 @@ function NewThreatModelScreen() {
   );
   // From the Analysis step on the test already exists, so the title gets a
   // pencil that opens the rename dialog.
+  // A failed rename is announced: the alert region is always there, so screen
+  // readers pick up the message when it is filled in.
   const editableHeading = (
-    <Inline space={16} alignItems="center" expand={1}>
-      {title}
-      <RenameTestButton name={name} onRename={setName} />
-    </Inline>
+    <div>
+      <Inline space={16} alignItems="center" expand={1}>
+        {title}
+        <RenameTestButton name={name} onRename={renameTest} />
+      </Inline>
+      <div role="alert">
+        {renameFailed && (
+          <Box paddingTop={8}>
+            <InlineError message={tWizard("rename.error")} />
+          </Box>
+        )}
+      </div>
+    </div>
   );
   const heading = phase === "configuration" ? title : editableHeading;
 
@@ -345,7 +374,7 @@ function NewThreatModelScreen() {
           stepper={stepper}
           footer={<WizardFooter onPrevious={handlePrevious} onNext={handleNext} hideNext />}
         >
-          <ResultsStep result={result} hideTitle stepTitle={tWizard("steps.results")} />
+          <ResultsStep result={shownResult} hideTitle stepTitle={tWizard("steps.results")} />
         </ContainedStep>
       )}
     </div>
