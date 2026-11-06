@@ -129,7 +129,7 @@ export default function CoverScreen() {
             <Text9 as="h1" textAlign="center" color={skinVars.colors.textPrimary}>
               {t("title")}
             </Text9>
-            <Text4 regular textAlign="center" color={skinVars.colors.textPrimary}>
+            <Text4 as="p" regular textAlign="center" color={skinVars.colors.textPrimary}>
               {t("subtitle")}
             </Text4>
             <Box paddingTop={8}>

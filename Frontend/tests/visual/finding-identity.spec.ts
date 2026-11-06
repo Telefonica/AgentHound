@@ -1,10 +1,11 @@
 import { test, expect, type Locator, type Page } from "@playwright/test";
 import { mockOpsDestructiveAnalysis, OPS_DESTRUCTIVE_ID } from "./mocks";
+import { settle } from "./screen";
 
 async function openResults(page: Page) {
   await page.goto(`/tests/${OPS_DESTRUCTIVE_ID}`);
   await page.getByTestId("prioritized-finding").first().waitFor();
-  await page.evaluate(() => document.fonts.ready);
+  await settle(page);
 }
 
 const byLabel = (items: Locator, label: string) => items.filter({ hasText: new RegExp(`${label}(?!\\d)`) });
@@ -16,7 +17,7 @@ async function expectDistinct(items: Locator, labels: string[]) {
 }
 
 test.beforeEach(async ({ page, context, baseURL }) => {
-  await context.addCookies([{ name: "agenthound-lang", value: "es", url: baseURL! }]);
+  await context.addCookies([{ name: "agenthound-lang", value: "en", url: baseURL! }]);
   await mockOpsDestructiveAnalysis(page);
 });
 
@@ -39,8 +40,8 @@ test.describe("Finding identity", () => {
   test("tells apart resolved findings of the same rule", async ({ page }) => {
     await openResults(page);
 
-    await page.getByRole("tab", { name: "Solución propuesta" }).click();
-    await page.getByRole("button", { name: /Resuelto/ }).click();
+    await page.getByRole("tab", { name: "Proposed Solution" }).click();
+    await page.getByRole("button", { name: /Resolved/ }).click();
     const items = page.getByTestId("resolved-finding");
 
     await expectDistinct(items, ["FH-011 #1", "FH-011 #2"]);

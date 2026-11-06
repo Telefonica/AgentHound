@@ -132,7 +132,7 @@ function ProcessingStep({ requestDone, error, onRetry, onComplete }: ProcessingS
 
             <Stack space={8}>
               {REASONING.slice(0, index).map((line, i) => {
-                const isActive = i === index - 1 && !complete;
+                const isActive = i === index - 1 && !complete && !error;
                 const isFinal = complete && i === REASONING.length - 1;
                 const lineColor = isActive || isFinal ? skinVars.colors.textPrimary : skinVars.colors.textSecondary;
                 return (

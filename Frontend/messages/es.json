@@ -54,6 +54,7 @@
     "listTitle": "Tus pruebas",
     "emptyTitle": "Crea tu primera prueba",
     "loadError": "No se pudieron cargar tus pruebas.",
+    "loadTestError": "No se pudo cargar esta prueba.",
     "back": "Volver al resumen",
     "delete": {
       "action": "Eliminar {name}",
@@ -111,6 +112,7 @@
     "fileWorkflowDesc": "Definición completa del flujo: nodos, conexiones, herramientas y salidas.",
     "chooseFileButton": "Elegir archivo",
     "filesRequired": "Sube al menos un archivo YAML para analizar.",
+    "nameRequired": "Ponle un nombre al análisis.",
     "exportHelpLink": "¿Cómo puedo exportar el archivo yaml?",
     "analyzeButton": "Analizar"
   },
@@ -183,10 +185,10 @@
       "worstTitle": "Pruebas de mayor riesgo",
       "maxScoreLabel": "puntuación máx. {score}",
       "frameworkTitle": "Hallazgos por framework",
-      "frameworkRow": "{tests} pruebas · {findings} hallazgos"
+      "frameworkRow": "{tests, plural, one {# prueba} other {# pruebas}} · {findings, plural, one {# hallazgo} other {# hallazgos}}"
     },
     "title": "Análisis de amenazas",
-    "subtitleTemplate": "{agents} agentes · {tools} herramientas · {data} activos de datos · {findings} hallazgos · {critical} rutas de ataque críticas detectadas",
+    "subtitleTemplate": "{agents, plural, one {# agente} other {# agentes}} · {tools, plural, one {# herramienta} other {# herramientas}} · {data, plural, one {# activo de datos} other {# activos de datos}} · {findings, plural, one {# hallazgo} other {# hallazgos}} · {critical, plural, one {# ruta de ataque crítica detectada} other {# rutas de ataque críticas detectadas}}",
     "tabFindings": "Hallazgos",
     "tabProposedSolution": "Solución propuesta",
     "graphTitleFindings": "Grafo de capacidades — Rutas de ataque",
@@ -229,7 +231,7 @@
         "output": "Salida"
       }
     },
-    "solvedBanner": "Todas las rutas de ataque críticas resueltas · {count} controles activados",
+    "solvedBanner": "Todas las rutas de ataque críticas resueltas · {count, plural, one {# control activado} other {# controles activados}}",
     "primaryPath": "Ruta crítica principal",
     "prioritizedFindings": "Hallazgos priorizados",
     "prioritizedFindingsCount": "{findings, plural, one {# hallazgo} other {# hallazgos}} · {groups, plural, one {# patrón} other {# patrones}}",
