@@ -406,7 +406,7 @@ const Flow = forwardRef<CyberGraphHandle, CyberGraphProps>(function Flow(
     const w = 1800;
     const h = 1000;
     const vp = getViewportForBounds(bounds, w, h, 0, MAX_ZOOM, 0.12);
-    // `cyber.bg` is a `var(--colorBackground)` reference — html-to-image needs a
+    // `cyber.bg` is a `var(--colorBackgroundAlternative)` reference — html-to-image needs a
     // resolved literal for its rasterised backgroundColor, so read the canvas
     // wrapper's actual computed (theme-resolved) background instead.
     const resolvedBg = getComputedStyle(canvas).backgroundColor;
@@ -437,6 +437,9 @@ const Flow = forwardRef<CyberGraphHandle, CyberGraphProps>(function Flow(
         height: isFullscreen ? "100vh" : CANVAS_H,
         width: "100%",
         background: cyber.bg,
+        // `laneBorder` is Mistica's `border` token. Fullscreen has no frame to draw.
+        border: isFullscreen ? "none" : `1px solid ${cyber.laneBorder}`,
+        boxSizing: "border-box",
         borderRadius: isFullscreen ? 0 : 16,
         overflow: "hidden",
         position: "relative",

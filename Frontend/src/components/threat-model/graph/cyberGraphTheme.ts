@@ -61,7 +61,9 @@ const STATUS = {
  * `STATUS` above) so the legend colors stay consistent across themes.
  */
 export const cyber = {
-  bg: skinVars.colors.background,
+  // Mistica's alternative background. The edge labels and marker cut-outs reuse it, so
+  // they keep matching the canvas.
+  bg: skinVars.colors.backgroundAlternative,
   bgPanel: applyAlpha(skinVars.rawColors.backgroundContainer, 0.85),
   // Node card face — a two-stop gradient echoing the skin's container surface.
   cardBg: `linear-gradient(160deg, ${applyAlpha(skinVars.rawColors.backgroundContainer, 0.97)}, ${applyAlpha(skinVars.rawColors.background, 0.97)})`,
