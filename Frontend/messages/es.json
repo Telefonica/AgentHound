@@ -81,7 +81,7 @@
     "rename": {
       "editLabel": "Editar el nombre de la prueba",
       "title": "Ponle nombre a tu prueba",
-      "description": "Estás a punto de crear una nueva prueba. Mientras la configuras, solo tú puedes verla y cambiar el nombre.",
+      "description": "Puedes editar el nombre de la prueba actual mientras la configuras",
       "fieldLabel": "nombre de la prueba*",
       "update": "Actualizar",
       "cancel": "Cancelar",

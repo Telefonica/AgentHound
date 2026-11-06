@@ -81,7 +81,7 @@
     "rename": {
       "editLabel": "Edit test name",
       "title": "Name your test",
-      "description": "You're about to create a new test. While you configure it, only you can see it and change the name.",
+      "description": "You can edit current test name while you configure it",
       "fieldLabel": "test name*",
       "update": "Update",
       "cancel": "Cancel",
