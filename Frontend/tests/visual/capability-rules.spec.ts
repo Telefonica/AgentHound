@@ -2,6 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 import capabilities from "./fixtures/capabilities.json" with { type: "json" };
 import analysis from "./fixtures/ops-destructive/analysis.json" with { type: "json" };
 import { API_ORIGIN, mockOpsDestructiveAnalysis } from "./mocks";
+import { fillAnalysisName, settle } from "./screen";
 
 const CORS = { "Access-Control-Allow-Origin": "*" };
 const YAML = { mimeType: "application/x-yaml", buffer: Buffer.from("agents: {}\n") };
@@ -23,20 +24,20 @@ async function openAgentEditor(page: Page) {
     route.fulfill({ status: 200, headers: CORS, contentType: "application/json", body: JSON.stringify(capabilities) }),
   );
   await page.goto("/tests/new");
-  await page.getByRole("textbox", { name: "Nombre del análisis" }).fill("IT Ops");
+  await fillAnalysisName(page, "Analysis name", "IT Ops");
   const uploads = page.locator("input[type=file]");
   await uploads.nth(0).setInputFiles({ name: "agents.yaml", ...YAML });
   await uploads.nth(0).setInputFiles({ name: "tasks.yaml", ...YAML });
-  await page.getByRole("button", { name: "Analizar" }).click();
+  await page.getByRole("button", { name: "Analyze" }).click();
   await page.getByText("Capability extraction complete").waitFor();
-  await page.getByRole("button", { name: "Siguiente" }).click();
-  await page.getByRole("button", { name: "Editar agente" }).first().click();
+  await page.getByRole("button", { name: "Next" }).click();
+  await page.getByRole("button", { name: "Edit agent" }).first().click();
   await page.getByRole("dialog").locator("[data-testid=unchecked-verbs]").first().waitFor();
-  await page.evaluate(() => document.fonts.ready);
+  await settle(page);
 }
 
 test.beforeEach(async ({ page, context, baseURL }) => {
-  await context.addCookies([{ name: "agenthound-lang", value: "es", url: baseURL! }]);
+  await context.addCookies([{ name: "agenthound-lang", value: "en", url: baseURL! }]);
   await mockOpsDestructiveAnalysis(page);
 });
 
@@ -55,7 +56,7 @@ test.describe("Capability rules in the agent editor", () => {
 
     await page.getByRole("dialog").getByRole("button", { name: "invokeTool", exact: true }).hover();
 
-    await expect(page.getByRole("tooltip")).toContainText("Lo comprueban FH-");
+    await expect(page.getByRole("tooltip")).toContainText("Checked by FH-");
   });
 
   test("names the rules when adding a verb some rule looks at", async ({ page }) => {
@@ -63,7 +64,7 @@ test.describe("Capability rules in the agent editor", () => {
 
     await page.getByRole("dialog").getByRole("button", { name: "invokeTool", exact: true }).click();
 
-    await expect(page.getByRole("dialog")).toContainText("Lo comprueban FH-");
+    await expect(page.getByRole("dialog")).toContainText("Checked by FH-");
   });
 
   test("warns when adding a verb no rule looks at", async ({ page }) => {
@@ -71,7 +72,7 @@ test.describe("Capability rules in the agent editor", () => {
 
     await page.getByRole("dialog").getByRole("button", { name: "summarize", exact: true }).click();
 
-    await expect(page.getByRole("dialog")).toContainText("Ninguna regla mira el verbo \"summarize\"");
+    await expect(page.getByRole("dialog")).toContainText("No rule looks at the verb \"summarize\"");
   });
 });
 
@@ -83,7 +84,7 @@ test.describe("Capability rules in the agent editor on a touch screen", () => {
 
     await page.getByRole("dialog").getByRole("button", { name: "invokeTool", exact: true }).tap();
 
-    await expect(page.getByRole("dialog")).toContainText("Lo comprueban FH-");
+    await expect(page.getByRole("dialog")).toContainText("Checked by FH-");
     await expect(page.getByRole("tooltip")).toHaveCount(0);
   });
 });

@@ -1,20 +1,21 @@
 import { test, expect, type Page } from "@playwright/test";
 import { mockOpsDestructiveAnalysis, OPS_DESTRUCTIVE_ID } from "./mocks";
+import { settle } from "./screen";
 
 const pattern = (page: Page, ruleId: string) => page.getByTestId("finding-pattern").filter({ hasText: ruleId });
-const occurrences = (page: Page, ruleId: string) => pattern(page, ruleId).getByRole("button", { name: /ocurrencias/ });
+const occurrences = (page: Page, ruleId: string) => pattern(page, ruleId).getByRole("button", { name: /occurrences/ });
 const graphDrawn = (page: Page) => page.locator("[data-ch-canvas] .react-flow__node").first().waitFor();
 
 async function openAttackGroup(page: Page) {
   await page.goto(`/tests/${OPS_DESTRUCTIVE_ID}`);
   await graphDrawn(page);
-  await page.getByRole("button", { name: /Rutas de ataque/ }).click();
+  await page.getByRole("button", { name: /Attack Paths/ }).click();
   await pattern(page, "FH-011").waitFor();
-  await page.evaluate(() => document.fonts.ready);
+  await settle(page);
 }
 
 test.beforeEach(async ({ page, context, baseURL }) => {
-  await context.addCookies([{ name: "agenthound-lang", value: "es", url: baseURL! }]);
+  await context.addCookies([{ name: "agenthound-lang", value: "en", url: baseURL! }]);
   await mockOpsDestructiveAnalysis(page);
 });
 
@@ -22,8 +23,8 @@ test.describe("Finding patterns", () => {
   test("folds a repeated cause into one card in the findings accordion", async ({ page }) => {
     await openAttackGroup(page);
 
-    await expect(page.getByRole("button", { name: /Rutas de ataque/ })).toContainText("causas");
-    await expect(pattern(page, "FH-011")).toContainText("2 hallazgos");
+    await expect(page.getByRole("button", { name: /Attack Paths/ })).toContainText("causes");
+    await expect(pattern(page, "FH-011")).toContainText("2 findings");
     await expect(page.getByTestId("finding-card").filter({ hasText: "FH-011 #1" })).toHaveCount(0);
     await expect(pattern(page, "FH-011")).toHaveScreenshot("pattern-fh-011-collapsed.png");
   });
@@ -52,18 +53,18 @@ test.describe("Finding patterns", () => {
 
   test("shows the risk reduction counting each cause once", async ({ page }) => {
     await page.goto(`/tests/${OPS_DESTRUCTIVE_ID}`);
-    await page.getByRole("tab", { name: "Solución propuesta" }).click();
+    await page.getByRole("tab", { name: "Proposed Solution" }).click();
 
-    await expect(page.getByText("Reducción por causa")).toBeVisible();
+    await expect(page.getByText("Reduction by cause")).toBeVisible();
     await expect(page.getByText("-50%", { exact: true })).toBeVisible();
   });
 
   test("lines up the before and after rows", async ({ page }) => {
     await page.goto(`/tests/${OPS_DESTRUCTIVE_ID}`);
-    await page.getByRole("tab", { name: "Solución propuesta" }).click();
+    await page.getByRole("tab", { name: "Proposed Solution" }).click();
     await page.getByTestId("before-after").waitFor();
     await graphDrawn(page);
-    await page.evaluate(() => document.fonts.ready);
+    await settle(page);
 
     const [beforeTops = [], afterTops = []] = await page.getByTestId("before-after-card").evaluateAll((cards) =>
       cards.map((card) => [...card.querySelectorAll("[data-testid=metric-row]")].map((r) => r.getBoundingClientRect().top)),
@@ -76,9 +77,9 @@ test.describe("Finding patterns", () => {
   test("keeps the before and after cards readable at the narrowest supported width", async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 900 });
     await page.goto(`/tests/${OPS_DESTRUCTIVE_ID}`);
-    await page.getByRole("tab", { name: "Solución propuesta" }).click();
+    await page.getByRole("tab", { name: "Proposed Solution" }).click();
     await page.getByTestId("before-after").waitFor();
-    await page.evaluate(() => document.fonts.ready);
+    await settle(page);
 
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow).toBe(0);

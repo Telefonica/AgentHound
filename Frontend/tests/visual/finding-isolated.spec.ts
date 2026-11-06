@@ -1,14 +1,14 @@
 import { test, expect, type Page } from "@playwright/test";
 import { API_ORIGIN, mockOpsDestructiveAnalysis, OPS_DESTRUCTIVE_ID } from "./mocks";
+import { canvas, settle, WITHOUT_GLOW } from "./screen";
 
 async function openResults(page: Page) {
   await page.goto(`/tests/${OPS_DESTRUCTIVE_ID}`);
   await page.getByTestId("prioritized-finding").first().waitFor();
   await page.getByTestId("prioritized-finding-group").filter({ hasText: /^FH-011/ }).click();
-  await page.evaluate(() => document.fonts.ready);
+  await settle(page);
 }
 
-const canvas = (page: Page) => page.locator("[data-ch-canvas]");
 const routePanel = (page: Page) => canvas(page).getByRole("status");
 const row = (page: Page, label: string) =>
   page.getByTestId("prioritized-finding").filter({ hasText: new RegExp(`^${label}(?!\\d)`) });
@@ -24,18 +24,18 @@ const FH_011_1_ROUTE = [
 ];
 
 test.beforeEach(async ({ page, context, baseURL }) => {
-  await context.addCookies([{ name: "agenthound-lang", value: "es", url: baseURL! }]);
+  await context.addCookies([{ name: "agenthound-lang", value: "en", url: baseURL! }]);
   await mockOpsDestructiveAnalysis(page);
 });
 
 test.describe("Isolated finding", () => {
   test("offers isolation only once a finding is selected", async ({ page }) => {
     await openResults(page);
-    await expect(canvas(page).getByRole("button", { name: "Aislar ruta" })).toHaveCount(0);
+    await expect(canvas(page).getByRole("button", { name: "Isolate route" })).toHaveCount(0);
 
     await row(page, "FH-011 #1").click();
 
-    await expect(canvas(page).getByRole("button", { name: "Aislar ruta" })).toBeVisible();
+    await expect(canvas(page).getByRole("button", { name: "Isolate route" })).toBeVisible();
   });
 
   test("draws only the finding's own nodes and edges from its endpoint", async ({ page }) => {
@@ -43,43 +43,43 @@ test.describe("Isolated finding", () => {
     await row(page, "FH-011 #1").click();
     const request = page.waitForRequest(`${API_ORIGIN}/analyses/${OPS_DESTRUCTIVE_ID}/findings/finding_001`);
 
-    await canvas(page).getByRole("button", { name: "Aislar ruta" }).click();
+    await canvas(page).getByRole("button", { name: "Isolate route" }).click();
     await request;
 
-    await expect(routePanel(page)).toContainText("Hallazgo aislado");
+    await expect(routePanel(page)).toContainText("Isolated finding");
     await expect(routePanel(page)).toContainText("FH-011 #1");
     await expect.poll(() => nodeIds(page)).toEqual(FH_011_1_ROUTE);
     await expect(canvas(page).locator(".react-flow__edge")).toHaveCount(4);
     await expect(canvas(page).locator(".ch-dim, .ch-hl")).toHaveCount(0);
-    await expect(canvas(page)).toHaveScreenshot("graph-fh-011-1-isolated.png");
+    await expect(canvas(page)).toHaveScreenshot("graph-fh-011-1-isolated.png", WITHOUT_GLOW);
   });
 
   test("plays the isolated route", async ({ page }) => {
     await openResults(page);
     await row(page, "FH-011 #1").click();
-    await canvas(page).getByRole("button", { name: "Aislar ruta" }).click();
-    await expect(routePanel(page)).toContainText("Hallazgo aislado");
+    await canvas(page).getByRole("button", { name: "Isolate route" }).click();
+    await expect(routePanel(page)).toContainText("Isolated finding");
 
-    await canvas(page).getByRole("button", { name: "Reproducir FH-011 #1" }).click();
+    await canvas(page).getByRole("button", { name: "Play FH-011 #1" }).click();
 
-    await expect(routePanel(page)).toContainText("Reproduciendo ruta");
+    await expect(routePanel(page)).toContainText("Playing route");
     await expect(canvas(page).locator(".react-flow__node.ch-current")).toHaveCount(1);
   });
 
   test("goes back to the whole graph in context and with “Ver todo”", async ({ page }) => {
     await openResults(page);
     await row(page, "FH-011 #1").click();
-    await canvas(page).getByRole("button", { name: "Aislar ruta" }).click();
+    await canvas(page).getByRole("button", { name: "Isolate route" }).click();
     await expect.poll(() => nodeIds(page)).toEqual(FH_011_1_ROUTE);
 
-    await canvas(page).getByRole("button", { name: "Ver en contexto" }).click();
+    await canvas(page).getByRole("button", { name: "Show in context" }).click();
 
     await expect(canvas(page).locator(".react-flow__node")).toHaveCount(9);
-    await expect(routePanel(page)).toContainText("Ruta resaltada");
+    await expect(routePanel(page)).toContainText("Highlighted route");
 
-    await canvas(page).getByRole("button", { name: "Aislar ruta" }).click();
+    await canvas(page).getByRole("button", { name: "Isolate route" }).click();
     await expect.poll(() => nodeIds(page)).toEqual(FH_011_1_ROUTE);
-    await routePanel(page).getByRole("button", { name: /Ver todo/ }).click();
+    await routePanel(page).getByRole("button", { name: /Show all/ }).click();
 
     await expect(routePanel(page)).toHaveCount(0);
     await expect(canvas(page).locator(".react-flow__node")).toHaveCount(9);
@@ -88,23 +88,24 @@ test.describe("Isolated finding", () => {
   test("isolates without leaving fullscreen", async ({ page }) => {
     await openResults(page);
     await row(page, "FH-011 #1").click();
-    await canvas(page).getByRole("button", { name: "Pantalla completa" }).click();
+    await canvas(page).getByRole("button", { name: "Fullscreen" }).click();
     await expect.poll(() => page.evaluate(() => document.fullscreenElement?.hasAttribute("data-ch-canvas"))).toBe(true);
 
-    await canvas(page).getByRole("button", { name: "Aislar ruta" }).click();
+    await canvas(page).getByRole("button", { name: "Isolate route" }).click();
 
     await expect.poll(() => nodeIds(page)).toEqual(FH_011_1_ROUTE);
-    await expect(routePanel(page)).toContainText("Hallazgo aislado");
+    await expect(routePanel(page)).toContainText("Isolated finding");
     await expect.poll(() => page.evaluate(() => document.fullscreenElement !== null)).toBe(true);
     await expect(page).toHaveScreenshot("graph-fh-011-1-isolated-fullscreen.png");
 
-    await canvas(page).getByRole("button", { name: "Ver en contexto" }).click();
+    await canvas(page).getByRole("button", { name: "Show in context" }).click();
 
     await expect(canvas(page).locator(".react-flow__node")).toHaveCount(9);
     await expect.poll(() => page.evaluate(() => document.fullscreenElement !== null)).toBe(true);
   });
 
-  test("drops the fullscreen title below the toolbar only when they would overlap", async ({ page }) => {
+  test("drops the fullscreen title below the toolbar only when the longer Spanish labels would overlap it", async ({ page, context, baseURL }) => {
+    await context.addCookies([{ name: "agenthound-lang", value: "es", url: baseURL! }]);
     const title = () => canvas(page).getByTestId("fullscreen-title");
     const toolbar = () => canvas(page).getByTestId("graph-toolbar");
     // The title eases between rows, so read the layout once it has settled.
@@ -146,10 +147,10 @@ test.describe("Isolated finding", () => {
     await openResults(page);
     await row(page, "FH-011 #1").click();
 
-    await canvas(page).getByRole("button", { name: "Aislar ruta" }).click();
+    await canvas(page).getByRole("button", { name: "Isolate route" }).click();
 
     await expect.poll(() => nodeIds(page)).toEqual(FH_011_1_ROUTE);
-    await expect(canvas(page)).toHaveScreenshot("graph-fh-011-1-isolated-dark.png");
+    await expect(canvas(page)).toHaveScreenshot("graph-fh-011-1-isolated-dark.png", WITHOUT_GLOW);
   });
 
   test("keeps the previous finding dimmed on screen while the next one loads", async ({ page }) => {
@@ -161,32 +162,32 @@ test.describe("Isolated finding", () => {
     });
     await openResults(page);
     await row(page, "FH-011 #1").click();
-    await canvas(page).getByRole("button", { name: "Aislar ruta" }).click();
+    await canvas(page).getByRole("button", { name: "Isolate route" }).click();
     await expect.poll(() => nodeIds(page)).toEqual(FH_011_1_ROUTE);
 
     await row(page, "FH-011 #2").click();
 
-    await expect(canvas(page).getByTestId("pending-route")).toHaveText("Cargando FH-011 #2…");
+    await expect(canvas(page).getByTestId("pending-route")).toHaveText("Loading FH-011 #2…");
     await expect(canvas(page)).toHaveAttribute("aria-busy", "true");
     await expect.poll(() => nodeIds(page)).toEqual(FH_011_1_ROUTE);
     await expect(routePanel(page)).toContainText("FH-011 #1");
-    await expect(canvas(page).getByRole("button", { name: /Reproducir/ })).toHaveCount(0);
+    await expect(canvas(page).getByRole("button", { name: /Play/ })).toHaveCount(0);
 
     release();
 
     await expect(canvas(page).getByTestId("pending-route")).toHaveCount(0);
     await expect(canvas(page).locator(".react-flow__node")).toHaveCount(9);
-    await expect(routePanel(page)).toContainText("No se pudo cargar la ruta de este hallazgo.");
+    await expect(routePanel(page)).toContainText("Couldn't load this finding's route.");
   });
 
   test("keeps the whole graph and offers a retry when the subgraph cannot load", async ({ page }) => {
     await openResults(page);
     await row(page, "FH-011 #2").click();
 
-    await canvas(page).getByRole("button", { name: "Aislar ruta" }).click();
+    await canvas(page).getByRole("button", { name: "Isolate route" }).click();
 
-    await expect(routePanel(page)).toContainText("No se pudo cargar la ruta de este hallazgo.");
-    await expect(canvas(page).getByRole("button", { name: "Reintentar ruta" })).toBeVisible();
+    await expect(routePanel(page)).toContainText("Couldn't load this finding's route.");
+    await expect(canvas(page).getByRole("button", { name: "Retry route" })).toBeVisible();
     await expect(canvas(page).locator(".react-flow__node")).toHaveCount(9);
   });
 
@@ -200,24 +201,24 @@ test.describe("Isolated finding", () => {
     await openResults(page);
     await row(page, "FH-011 #1").click();
 
-    await canvas(page).getByRole("button", { name: "Aislar ruta" }).click();
-    await expect(routePanel(page)).toContainText("No se pudo cargar la ruta de este hallazgo.");
+    await canvas(page).getByRole("button", { name: "Isolate route" }).click();
+    await expect(routePanel(page)).toContainText("Couldn't load this finding's route.");
 
-    await canvas(page).getByRole("button", { name: "Reintentar ruta" }).click();
+    await canvas(page).getByRole("button", { name: "Retry route" }).click();
 
     await expect.poll(() => nodeIds(page)).toEqual(FH_011_1_ROUTE);
-    await expect(routePanel(page)).toContainText("Hallazgo aislado");
-    await expect(routePanel(page)).not.toContainText("No se pudo cargar");
+    await expect(routePanel(page)).toContainText("Isolated finding");
+    await expect(routePanel(page)).not.toContainText("Couldn't load");
   });
 
   test("returns to the whole graph after a trip to the proposed solution", async ({ page }) => {
     await openResults(page);
     await row(page, "FH-011 #1").click();
-    await canvas(page).getByRole("button", { name: "Aislar ruta" }).click();
+    await canvas(page).getByRole("button", { name: "Isolate route" }).click();
     await expect.poll(() => nodeIds(page)).toEqual(FH_011_1_ROUTE);
 
-    const solutionTab = page.getByRole("tab", { name: "Solución propuesta" });
-    const findingsTab = page.getByRole("tab", { name: "Hallazgos" });
+    const solutionTab = page.getByRole("tab", { name: "Proposed Solution" });
+    const findingsTab = page.getByRole("tab", { name: "Findings" });
     // Mística's tabs ignore a press that lands right after the previous tab change.
     const select = (tab: typeof solutionTab) =>
       expect(async () => {
@@ -225,38 +226,38 @@ test.describe("Isolated finding", () => {
         await expect(tab).toHaveAttribute("aria-selected", "true", { timeout: 500 });
       }).toPass();
     await select(solutionTab);
-    await expect(page.getByRole("heading", { name: "Grafo de capacidades resuelto" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Resolved Capability Graph" })).toBeVisible();
     await select(findingsTab);
 
-    await expect(canvas(page).getByRole("button", { name: "Aislar ruta" })).toBeVisible();
+    await expect(canvas(page).getByRole("button", { name: "Isolate route" })).toBeVisible();
     await expect(canvas(page).locator(".react-flow__node")).toHaveCount(9);
-    await expect(routePanel(page)).toContainText("Ruta resaltada");
+    await expect(routePanel(page)).toContainText("Highlighted route");
   });
 
   test("hides the primary route card while a finding is isolated", async ({ page }) => {
-    const primaryCard = page.getByText("Ruta crítica principal");
+    const primaryCard = page.getByText("Primary critical path");
     await openResults(page);
     await row(page, "FH-011 #1").click();
     await expect(primaryCard).toBeVisible();
 
-    await canvas(page).getByRole("button", { name: "Aislar ruta" }).click();
+    await canvas(page).getByRole("button", { name: "Isolate route" }).click();
     await expect.poll(() => nodeIds(page)).toEqual(FH_011_1_ROUTE);
     await expect(primaryCard).toHaveCount(0);
 
-    await canvas(page).getByRole("button", { name: "Ver en contexto" }).click();
+    await canvas(page).getByRole("button", { name: "Show in context" }).click();
     await expect(primaryCard).toBeVisible();
   });
 
   test("shows a failed load and its retry in fullscreen", async ({ page }) => {
     await openResults(page);
     await row(page, "FH-011 #2").click();
-    await canvas(page).getByRole("button", { name: "Pantalla completa" }).click();
+    await canvas(page).getByRole("button", { name: "Fullscreen" }).click();
     await expect.poll(() => page.evaluate(() => document.fullscreenElement?.hasAttribute("data-ch-canvas"))).toBe(true);
 
-    await canvas(page).getByRole("button", { name: "Aislar ruta" }).click();
+    await canvas(page).getByRole("button", { name: "Isolate route" }).click();
 
-    await expect(routePanel(page)).toContainText("No se pudo cargar la ruta de este hallazgo.");
-    await expect(canvas(page).getByRole("button", { name: "Reintentar ruta" })).toBeVisible();
+    await expect(routePanel(page)).toContainText("Couldn't load this finding's route.");
+    await expect(canvas(page).getByRole("button", { name: "Retry route" })).toBeVisible();
     await expect.poll(() => page.evaluate(() => document.fullscreenElement !== null)).toBe(true);
   });
 });

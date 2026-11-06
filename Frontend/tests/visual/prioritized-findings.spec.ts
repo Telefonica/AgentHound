@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import fixture from "./fixtures/ops-destructive/findings.json" with { type: "json" };
 import { API_ORIGIN, mockOpsDestructiveAnalysis, OPS_DESTRUCTIVE_ID } from "./mocks";
+import { settle } from "./screen";
 
 const COPIES = 12;
 
@@ -30,11 +31,11 @@ async function openResults(page: Page) {
   );
   await page.goto(`/tests/${OPS_DESTRUCTIVE_ID}`);
   await box(page).waitFor();
-  await page.evaluate(() => document.fonts.ready);
+  await settle(page);
 }
 
 test.beforeEach(async ({ page, context, baseURL }) => {
-  await context.addCookies([{ name: "agenthound-lang", value: "es", url: baseURL! }]);
+  await context.addCookies([{ name: "agenthound-lang", value: "en", url: baseURL! }]);
   await mockOpsDestructiveAnalysis(page);
 });
 
@@ -42,12 +43,12 @@ test.describe("Prioritized findings at scale", () => {
   test("shows only the top patterns, so the metrics stay right below the graph", async ({ page }) => {
     await openResults(page);
 
-    await expect(box(page)).toContainText(`${LARGE.findings.length} hallazgos · ${GROUPS} patrones`);
+    await expect(box(page)).toContainText(`${LARGE.findings.length} findings · ${GROUPS} patterns`);
     await expect(topLevelRows(page)).toHaveCount(5);
     const { height } = (await box(page).boundingBox())!;
     expect(height).toBeLessThan(320);
     const boxBottom = await box(page).evaluate((el) => el.getBoundingClientRect().bottom);
-    const metricsTop = await page.getByRole("heading", { name: "Métricas de riesgo" }).evaluate((el) => el.getBoundingClientRect().top);
+    const metricsTop = await page.getByRole("heading", { name: "Risk Metrics" }).evaluate((el) => el.getBoundingClientRect().top);
     expect(metricsTop - boxBottom).toBeLessThan(80);
     await expect(box(page)).toHaveScreenshot("prioritized-list-top-patterns.png");
   });
@@ -57,7 +58,7 @@ test.describe("Prioritized findings at scale", () => {
 
     await expect(firstGroup(page)).toHaveAttribute("aria-expanded", "false");
     await expect(firstGroup(page)).toHaveText(
-      "FH-011Destructive modification from untrusted input desde Inbound maintenance ticket email · puntuación 1024 hallazgos",
+      "FH-011Destructive modification from untrusted input from Inbound maintenance ticket email · score 1024 findings",
     );
     await expect(rows(page).filter({ hasText: /^FH-011 #/ })).toHaveCount(0);
   });
@@ -71,9 +72,9 @@ test.describe("Prioritized findings at scale", () => {
     await expect(rows(page).filter({ hasText: /^FH-011 #/ })).toHaveCount(10);
     await expect(box(page)).toHaveScreenshot("prioritized-list-group-expanded.png");
 
-    await box(page).getByRole("button", { name: "Ver 14 más" }).click();
+    await box(page).getByRole("button", { name: "Show 14 more" }).click();
     await expect(rows(page).filter({ hasText: /^FH-011 #/ })).toHaveCount(24);
-    await box(page).getByRole("button", { name: "Ver solo las 10 primeras" }).click();
+    await box(page).getByRole("button", { name: "Show only the first 10" }).click();
     await expect(rows(page).filter({ hasText: /^FH-011 #/ })).toHaveCount(10);
 
     const occurrence = rows(page).filter({ hasText: /^FH-011 #2(?!\d)/ });
@@ -98,8 +99,8 @@ test.describe("Prioritized findings at scale", () => {
     await openResults(page);
 
     await expect(groupRows(page).filter({ hasText: /^FH-005/ })).toHaveText([
-      /^FH-005Tool with side effect missing approval and rollback en customer_records_delete/,
-      /^FH-005Tool with side effect missing approval and rollback en crm_records_update/,
+      /^FH-005Tool with side effect missing approval and rollback in customer_records_delete/,
+      /^FH-005Tool with side effect missing approval and rollback in crm_records_update/,
     ]);
   });
 
@@ -107,12 +108,12 @@ test.describe("Prioritized findings at scale", () => {
     await openResults(page);
     const collapsed = (await box(page).boundingBox())!.height;
 
-    await box(page).getByRole("button", { name: `Ver los ${GROUPS} patrones` }).click();
+    await box(page).getByRole("button", { name: `Show all ${GROUPS} patterns` }).click();
 
     await expect(topLevelRows(page)).toHaveCount(GROUPS);
-    await expect(box(page).getByRole("button", { name: "Ver solo los 5 primeros" })).toHaveAttribute("aria-expanded", "true");
+    await expect(box(page).getByRole("button", { name: "Show only the top 5" })).toHaveAttribute("aria-expanded", "true");
 
-    await box(page).getByRole("button", { name: "Ver solo los 5 primeros" }).click();
+    await box(page).getByRole("button", { name: "Show only the top 5" }).click();
 
     await expect(topLevelRows(page)).toHaveCount(5);
     expect((await box(page).boundingBox())!.height).toBe(collapsed);

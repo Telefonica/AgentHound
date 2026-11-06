@@ -54,6 +54,7 @@
     "listTitle": "Your tests",
     "emptyTitle": "Create your first test",
     "loadError": "Could not load your tests.",
+    "loadTestError": "Could not load this test.",
     "back": "Back to overview",
     "delete": {
       "action": "Delete {name}",
@@ -100,6 +101,7 @@
     "fileWorkflowDesc": "Full workflow definition: nodes, connections, tools and outputs.",
     "chooseFileButton": "Choose file",
     "filesRequired": "Upload at least one YAML file to analyze.",
+    "nameRequired": "Give the analysis a name.",
     "exportHelpLink": "How can I export the yaml file?",
     "analyzeButton": "Analyze"
   },
@@ -108,7 +110,7 @@
     "subtitle": "YAML → IR normalization → capability graph",
     "progressLabel": "Progress",
     "doneTitle": "Architecture parsed",
-    "doneDesc": "{findings} findings detected · {critical} critical · max score {maxScore} · {agents} agents",
+    "doneDesc": "{findings, plural, one {# finding} other {# findings}} detected · {critical} critical · max score {maxScore} · {agents, plural, one {# agent} other {# agents}}",
     "errorTitle": "Parsing failed"
   },
   "inference": {
@@ -166,10 +168,10 @@
       "worstTitle": "Highest-risk tests",
       "maxScoreLabel": "max score {score}",
       "frameworkTitle": "Findings by framework",
-      "frameworkRow": "{tests} tests · {findings} findings"
+      "frameworkRow": "{tests, plural, one {# test} other {# tests}} · {findings, plural, one {# finding} other {# findings}}"
     },
     "title": "Threat Analysis",
-    "subtitleTemplate": "{agents} agents · {tools} tools · {data} data assets · {findings} findings · {critical} critical attack routes detected",
+    "subtitleTemplate": "{agents, plural, one {# agent} other {# agents}} · {tools, plural, one {# tool} other {# tools}} · {data, plural, one {# data asset} other {# data assets}} · {findings, plural, one {# finding} other {# findings}} · {critical, plural, one {# critical attack route} other {# critical attack routes}} detected",
     "tabFindings": "Findings",
     "tabProposedSolution": "Proposed Solution",
     "graphTitleFindings": "Capability Graph — Attack Paths",
@@ -212,7 +214,7 @@
         "output": "Output"
       }
     },
-    "solvedBanner": "All critical attack paths resolved · {count} controls activated",
+    "solvedBanner": "All critical attack paths resolved · {count, plural, one {# control} other {# controls}} activated",
     "primaryPath": "Primary critical path",
     "prioritizedFindings": "Prioritized findings",
     "prioritizedFindingsCount": "{findings, plural, one {# finding} other {# findings}} · {groups, plural, one {# pattern} other {# patterns}}",

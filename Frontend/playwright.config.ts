@@ -10,14 +10,14 @@ export default defineConfig({
 
   expect: {
     toHaveScreenshot: {
-      maxDiffPixelRatio: 0.001,
+      maxDiffPixels: 20,
       threshold: 0.02,
     },
   },
 
   use: {
     baseURL: "http://localhost:3013",
-    locale: "es-ES",
+    locale: "en-US",
     timezoneId: "Europe/Madrid",
     contextOptions: { reducedMotion: "reduce" },
     trace: "on-first-retry",

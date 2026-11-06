@@ -127,6 +127,7 @@ function ConfigurationStep({
     onFilesChange(active);
   }, [activeKeys, filesByField, onFilesChange]);
 
+  const nameInvalid = (showValidation || touched) && !name.trim();
   const showFilesError = showValidation && uploadFields.every((f) => (filesByField[f.key] ?? []).length === 0);
 
   return (
@@ -140,7 +141,8 @@ function ConfigurationStep({
             value={name}
             onChangeValue={onNameChange}
             onBlur={() => setTouched(true)}
-            error={(showValidation || touched) && !name.trim()}
+            error={nameInvalid}
+            helperText={nameInvalid ? t("nameRequired") : undefined}
             fullWidth
           />
           <Select

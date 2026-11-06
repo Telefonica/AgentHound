@@ -6,6 +6,7 @@ export default function BackgroundGlowBlobs() {
   return (
     <div
       aria-hidden
+      data-glow-blobs
       style={{
         position: "absolute",
         inset: 0,

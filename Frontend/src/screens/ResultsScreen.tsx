@@ -192,6 +192,7 @@ export default function ResultsScreen() {
                       <Inline key={sev} space={4} alignItems="center">
                         <span
                           style={{
+                            display: "block",
                             width: 10,
                             height: 10,
                             borderRadius: 2,

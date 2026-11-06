@@ -90,7 +90,7 @@ function ProcessingStep({ requestDone, error, onRetry, counts, onComplete }: Pro
             <Box paddingX={20} paddingY={20}>
               <Stack space={4}>
                 {REASONING.slice(0, index).map((line, i) => {
-                  const isActive = i === index - 1 && !complete;
+                  const isActive = i === index - 1 && !complete && !error;
                   const isFinal = complete && i === REASONING.length - 1;
                   const lineColor = isActive || isFinal ? skinVars.colors.textPrimary : skinVars.colors.textSecondary;
                   return (
