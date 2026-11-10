@@ -33,6 +33,9 @@ async function openAgentEditor(page: Page) {
   await page.getByRole("button", { name: "Next" }).click();
   await page.getByRole("button", { name: "Edit agent" }).first().click();
   await page.getByRole("dialog").locator("[data-testid=unchecked-verbs]").first().waitFor();
+  // The pointer is still where "Edit agent" was pressed, which can land on a verb
+  // of the drawer and open its tooltip. Move it away so each test starts clean.
+  await page.mouse.move(0, 0);
   await settle(page);
 }
 
