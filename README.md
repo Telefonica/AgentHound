@@ -93,6 +93,15 @@ pnpm lint
 pnpm test
 ```
 
+Frontend visual regression (Playwright, against a production build):
+
+```bash
+# from Frontend/
+pnpm test:visual
+```
+
+The committed baselines were generated on macOS, so this only passes there for now. See [`Frontend/README.md`](Frontend/README.md) for running it elsewhere.
+
 ## Try it
 
 The end-to-end path works today with **generic-format YAML** (top-level `nodes`/`edges`; the backend auto-detects the `generic` framework). A ready fixture ships in the repo:
@@ -121,4 +130,4 @@ AgentHound is released under the GNU Affero General Public License v3.0 (AGPL-3.
 
 The web UI is built with the [`@telefonica/mistica`](https://github.com/Telefonica/mistica-web) design system, which is itself MIT-licensed.
 
-Third-party dependencies remain under their own licenses. Their attribution notices are collected in [`THIRD-PARTY-NOTICES.txt`](THIRD-PARTY-NOTICES.txt), with per-ecosystem summaries and regeneration instructions in [`Docs/licenses/`](Docs/licenses/README.md).
+Third-party dependencies remain under their own licenses. Their attribution notices are collected in [`THIRD-PARTY-NOTICES.txt`](THIRD-PARTY-NOTICES.txt).
