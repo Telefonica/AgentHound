@@ -1,4 +1,4 @@
-import { act } from "react";
+import { act, useEffect } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useAnalysisName, type AnalysisName } from "@/hooks/useAnalysisName";
@@ -26,8 +26,12 @@ function nth(i: number): Pending {
 }
 
 let hook: AnalysisName;
+/** Exposes the hook's latest value. It is handed over in an effect, which `act` flushes, not during render. */
 function Harness() {
-  hook = useAnalysisName();
+  const value = useAnalysisName();
+  useEffect(() => {
+    hook = value;
+  });
   return null;
 }
 
