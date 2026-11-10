@@ -319,7 +319,9 @@ function ResultsStep({ result, stepTitle }: ResultsStepProps) {
   const graphSectionRef = useRef<HTMLDivElement>(null);
   const selectFinding = useCallback((id: string) => {
     setSelectedFindingId((current) => (current === id ? null : id));
-    graphSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    // Smooth scrolling is motion too: users who asked for less get a jump.
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    graphSectionRef.current?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "nearest" });
   }, []);
   const clearSelection = useCallback(() => setSelectedFindingId(null), []);
   const labelById = useMemo(() => findingLabels(result?.findings ?? []), [result]);
