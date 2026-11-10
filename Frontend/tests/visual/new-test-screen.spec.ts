@@ -122,9 +122,14 @@ test.describe("New test screen", () => {
 
   test("shows the parse failure with a retry", async ({ page }) => {
     await mockEndpointError(page, "POST", "/analyses");
+    await page.clock.install();
     await openNewTest(page);
 
     await fillConfiguration(page);
+    // The reasoning log adds a line every 640 ms until the error arrives, so on a
+    // slow run the screenshot caught one line more. Freeze the page's timers:
+    // the error lands with the first line only, however long the request takes.
+    await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1_000));
     await page.getByRole("button", { name: "Analyze" }).click();
     // The step's own header (h2) names the failure; the page title (h1) stays the test name.
     await page.getByRole("heading", { name: "Parsing failed", level: 2 }).waitFor();
