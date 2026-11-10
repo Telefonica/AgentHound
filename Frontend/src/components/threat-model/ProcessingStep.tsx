@@ -31,6 +31,37 @@ function formatElapsed(ms: number): string {
   return `${pad(Math.floor(totalSeconds / 3600))}:${pad(Math.floor((totalSeconds % 3600) / 60))}:${pad(totalSeconds % 60)}`;
 }
 
+interface ElapsedTimeProps {
+  /** When the analysis started (or was last retried), from `Date.now()`. */
+  startedAt: number;
+  /** True once the step completes or fails: the time freezes at that moment. */
+  stopped: boolean;
+}
+
+/**
+ * Elapsed time since `startedAt`. It keeps its own ticking state so only this
+ * text re-renders every tick, not the whole step and its reasoning log.
+ */
+function ElapsedTime({ startedAt, stopped }: ElapsedTimeProps) {
+  const t = useTranslations("processing");
+  const [elapsedMs, setElapsedMs] = useState(0);
+  useEffect(() => {
+    const tick = () => setElapsedMs(Date.now() - startedAt);
+    tick();
+    // On stop, the tick above freezes the exact final time instead of the last
+    // interval's value, which can be up to one tick behind.
+    if (stopped) return undefined;
+    const timer = setInterval(tick, ELAPSED_TICK_MS);
+    return () => clearInterval(timer);
+  }, [stopped, startedAt]);
+
+  return (
+    <Text1 regular color={skinVars.colors.textSecondary}>
+      {t("elapsedTime", { time: formatElapsed(elapsedMs) })}
+    </Text1>
+  );
+}
+
 interface ProcessingStepProps {
   /** True once the backend analysis request has resolved successfully. */
   requestDone: boolean;
@@ -66,36 +97,28 @@ function ProcessingStep({ requestDone, error, onRetry, onComplete }: ProcessingS
     if (complete) onComplete?.();
   }, [complete, onComplete]);
 
-  // Elapsed time since the analysis started (or was last retried). It stops
-  // ticking once the step completes or fails.
+  // When the analysis started (or was last retried); ElapsedTime counts from it.
   const [startedAt, setStartedAt] = useState(() => Date.now());
-  const [elapsedMs, setElapsedMs] = useState(0);
-  const stopped = complete || Boolean(error);
-  useEffect(() => {
-    if (stopped) return undefined;
-    const timer = setInterval(() => setElapsedMs(Date.now() - startedAt), ELAPSED_TICK_MS);
-    return () => clearInterval(timer);
-  }, [stopped, startedAt]);
 
   const handleRetry = () => {
     setStartedAt(Date.now());
-    setElapsedMs(0);
     onRetry();
   };
+
+  // The header follows the step's state. On error the Callout below carries the
+  // backend's message, so the header only names the failure.
+  const title = error ? t("errorTitle") : complete ? t("doneTitle") : t("heading");
+  const description = error ? undefined : complete ? t("doneDescription") : t("title");
 
   // Rendered inside the wizard's container. The header and the 32 gap to the
   // content come from StepSection; the progress card holds both the progress
   // summary and the reasoning log, 32 apart.
   return (
-    <StepSection
-      title={t("heading")}
-      description={error ? t("errorTitle") : complete ? t("doneTitle") : t("title")}
-    >
+    <StepSection title={title} description={description}>
       <Stack space={24}>
         {error && (
           <Callout
             variant="default"
-            title={t("errorTitle")}
             description={error}
             asset={<IconAlertFilled color={skinVars.colors.error} />}
             button={
@@ -106,56 +129,56 @@ function ProcessingStep({ requestDone, error, onRetry, onComplete }: ProcessingS
           />
         )}
 
-      <Boxed>
-        <Box paddingX={32} paddingY={32}>
-          <Stack space={32}>
-            <Stack space={12}>
-              <Stack space={40}>
-                <Inline space={16} alignItems="center">
-                  <IconRocketRegular size={24} color={skinVars.colors.brand} />
-                  <Text3 regular>{t("progressLabel")}</Text3>
-                </Inline>
-                <Stack space={24}>
-                  <Inline space="between" alignItems="center">
-                    <Text2 regular color={skinVars.colors.textSecondary}>
-                      {t("subtitle")}
-                    </Text2>
-                    <Text1 regular color={skinVars.colors.textSecondary}>
-                      {t("elapsedTime", { time: formatElapsed(elapsedMs) })}
-                    </Text1>
+        <Boxed>
+          <Box paddingX={32} paddingY={32}>
+            <Stack space={32}>
+              <Stack space={12}>
+                <Stack space={40}>
+                  <Inline space={16} alignItems="center">
+                    <IconRocketRegular size={24} color={skinVars.colors.brand} />
+                    <Text3 regular>{t("progressLabel")}</Text3>
                   </Inline>
-                  <ProgressBar progressPercent={percent} />
+                  <Stack space={24}>
+                    <Inline space="between" alignItems="center">
+                      <Text2 regular color={skinVars.colors.textSecondary}>
+                        {t("subtitle")}
+                      </Text2>
+                      <ElapsedTime startedAt={startedAt} stopped={complete || Boolean(error)} />
+                    </Inline>
+                    <ProgressBar progressPercent={percent} aria-label={t("progressLabel")} />
+                  </Stack>
                 </Stack>
+                <Text6>{percent}%</Text6>
               </Stack>
-              <Text6>{percent}%</Text6>
-            </Stack>
 
-            <Stack space={8}>
-              {REASONING.slice(0, index).map((line, i) => {
-                const isActive = i === index - 1 && !complete && !error;
-                const isFinal = complete && i === REASONING.length - 1;
-                const lineColor = isActive || isFinal ? skinVars.colors.textPrimary : skinVars.colors.textSecondary;
-                return (
-                  <Inline key={line} space={8} alignItems="center">
-                    {isActive ? (
-                      <Spinner size={14} color={skinVars.colors.brand} />
-                    ) : isFinal ? (
-                      <IconCheckFilled size={14} color={skinVars.colors.brand} />
-                    ) : (
-                      <Box width={14}>
-                        <Text1 regular color={lineColor} textAlign="center">–</Text1>
-                      </Box>
-                    )}
-                    <Text1 regular color={lineColor}>
-                      {line}
-                    </Text1>
-                  </Inline>
-                );
-              })}
+              <Stack space={8}>
+                {REASONING.slice(0, index).map((line, i) => {
+                  const isActive = i === index - 1 && !complete && !error;
+                  const isFinal = complete && i === REASONING.length - 1;
+                  const lineColor = isActive || isFinal ? skinVars.colors.textPrimary : skinVars.colors.textSecondary;
+                  return (
+                    <Inline key={line} space={8} alignItems="center">
+                      {isActive ? (
+                        <Spinner size={14} color={skinVars.colors.brand} />
+                      ) : isFinal ? (
+                        <IconCheckFilled size={14} color={skinVars.colors.brand} />
+                      ) : (
+                        <Box width={14}>
+                          <Text1 regular color={lineColor} textAlign="center">
+                            –
+                          </Text1>
+                        </Box>
+                      )}
+                      <Text1 regular color={lineColor}>
+                        {line}
+                      </Text1>
+                    </Inline>
+                  );
+                })}
+              </Stack>
             </Stack>
-          </Stack>
-        </Box>
-      </Boxed>
+          </Box>
+        </Boxed>
       </Stack>
     </StepSection>
   );

@@ -81,8 +81,9 @@
     "rename": {
       "editLabel": "Editar el nombre de la prueba",
       "title": "Ponle nombre a tu prueba",
-      "description": "Puedes editar el nombre de la prueba actual mientras la configuras",
-      "fieldLabel": "nombre de la prueba*",
+      "description": "Puedes editar aquí el nombre de la prueba.",
+      "fieldLabel": "Nombre de la prueba",
+      "emptyName": "Escribe un nombre. Si lo dejas vacío, la prueba mantiene su nombre actual.",
       "update": "Actualizar",
       "cancel": "Cancelar",
       "close": "Cerrar el cuadro de nombre",
@@ -92,7 +93,6 @@
       "configuration": "Configuración",
       "analysis": "Análisis",
       "capabilities": "Capacidades",
-      "inference": "Inferencia",
       "results": "Resultados"
     }
   },
@@ -124,6 +124,7 @@
     "progressLabel": "Progreso",
     "elapsedTime": "Tiempo transcurrido {time}",
     "doneTitle": "Arquitectura procesada",
+    "doneDescription": "El grafo de capacidades está listo para revisarlo.",
     "errorTitle": "El procesado ha fallado"
   },
   "inference": {

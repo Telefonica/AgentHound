@@ -298,12 +298,15 @@ function ChokepointCallout({ rec }: { rec: ChokepointRec }) {
 
 interface ResultsStepProps {
   result: AnalysisResult | null;
-  hideTitle?: boolean;
-  /** Wizard step title. When set, the header uses the shared step header (title + paragraph) instead of the page-title style. */
+  /**
+   * Wizard step title. When set, the header uses the shared step header (title +
+   * paragraph) and the analysis name is left to the wizard's own heading.
+   * Otherwise the analysis name is the page title.
+   */
   stepTitle?: string;
 }
 
-function ResultsStep({ result, hideTitle = false, stepTitle }: ResultsStepProps) {
+function ResultsStep({ result, stepTitle }: ResultsStepProps) {
   const t = useTranslations("results");
   const tSeverity = useTranslations("overview.severity");
   const tCommon = useTranslations("common");
@@ -369,7 +372,7 @@ function ResultsStep({ result, hideTitle = false, stepTitle }: ResultsStepProps)
         <StepHeader title={stepTitle} description={subtitle} />
       ) : (
         <Stack space={4}>
-          {!hideTitle && <Text4 medium as="h1">{result.name || t("title")}</Text4>}
+          <Text4 medium as="h1">{result.name || t("title")}</Text4>
           <Text2 regular color={skinVars.colors.textSecondary}>
             {subtitle}
           </Text2>

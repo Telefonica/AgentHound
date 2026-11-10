@@ -81,8 +81,9 @@
     "rename": {
       "editLabel": "Edit test name",
       "title": "Name your test",
-      "description": "You can edit current test name while you configure it",
-      "fieldLabel": "test name*",
+      "description": "You can edit the test name here.",
+      "fieldLabel": "Test name",
+      "emptyName": "Enter a name. If you leave it empty, the test keeps its current name.",
       "update": "Update",
       "cancel": "Cancel",
       "close": "Close rename dialog",
@@ -92,7 +93,6 @@
       "configuration": "Configuration",
       "analysis": "Analysis",
       "capabilities": "Capabilities",
-      "inference": "Inference",
       "results": "Results"
     }
   },
@@ -124,6 +124,7 @@
     "progressLabel": "Progress",
     "elapsedTime": "Elapsed time {time}",
     "doneTitle": "Architecture parsed",
+    "doneDescription": "The capability graph is ready for review.",
     "errorTitle": "Parsing failed"
   },
   "inference": {

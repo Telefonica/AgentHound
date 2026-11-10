@@ -2,14 +2,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Box, Boxed, Inline, Stack, Text8, skinVars } from "@telefonica/mistica";
+import { Box, Boxed, Inline, Stack, Stepper, Text8, skinVars } from "@telefonica/mistica";
 import ConfigurationStep from "@/components/threat-model/ConfigurationStep";
 import ProcessingStep from "@/components/threat-model/ProcessingStep";
 import InferenceStep from "@/components/threat-model/InferenceStep";
 import ResultsStep from "@/components/threat-model/ResultsStep";
 import WizardFooter from "@/components/threat-model/WizardFooter";
-import WizardStepper from "@/components/threat-model/WizardStepper";
 import RenameTestButton from "@/components/threat-model/RenameTestButton";
+import { WIZARD_WIDTH_CLASS } from "@/components/threat-model/wizardLayout";
 import { PROVIDERS, YAML_COUNT } from "@/lib/threatModelData";
 import { buildCrewaiUpload } from "@/lib/crewai";
 import { analyze, createAnalysis, getGraph } from "@/lib/api/agentHound";
@@ -28,11 +28,12 @@ import InlineError from "@/components/ui/InlineError";
 import { logger } from "@/lib/logger";
 import type { GraphEdge, GraphNode, WizardPhase } from "@/types/ThreatModel";
 
+/** Position of each phase in the stepper, 0-based. */
 const STEP_INDEX: Record<WizardPhase, number> = {
-  configuration: 1,
-  processing: 2,
-  inference: 3,
-  results: 4,
+  configuration: 0,
+  processing: 1,
+  inference: 2,
+  results: 3,
 };
 
 // Frameworks the backend has a dedicated adapter for, including the explicit
@@ -41,9 +42,9 @@ const STEP_INDEX: Record<WizardPhase, number> = {
 const BACKEND_FRAMEWORKS = new Set(["crewai", "dify", "langgraph", "generic"]);
 
 /**
- * Frame shared by the steps that live inside a single container (Configuration
- * and Analysis): the title (48 above, 40 below), then one container that holds
- * the stepper and the step content, with the footer pinned underneath.
+ * Frame shared by every wizard step: the title (48 above, 40 below), then one
+ * container that holds the stepper and the step content, with the footer
+ * pinned underneath.
  */
 function ContainedStep({
   heading,
@@ -62,10 +63,7 @@ function ContainedStep({
         {heading}
       </Box>
       <Box paddingBottom={32}>
-        {/* From 1920px up the container stops growing at 1440px. The cap lives on a
-            plain wrapper: Mistica's own (unlayered) styles win over a utility class
-            set on Boxed itself. */}
-        <div className="w-full min-[1920px]:max-w-[1440px]">
+        <div className={WIZARD_WIDTH_CLASS}>
           <Boxed width="100%">
             <Box paddingX={32} paddingY={40}>
               <Stack space={56}>
@@ -264,7 +262,7 @@ function NewThreatModelScreen() {
   // analysis ran can make out of date.
   const shownResult = useMemo(() => (result ? { ...result, name: name.trim() || result.name } : null), [result, name]);
 
-  const stepper = <WizardStepper steps={stepLabels} currentStep={STEP_INDEX[phase]} aria-label={tWizard("progressLabel")} />;
+  const stepper = <Stepper steps={stepLabels} currentIndex={STEP_INDEX[phase]} aria-label={tWizard("progressLabel")} />;
 
   const title = (
     <Text8 as="h1" color={skinVars.colors.neutralHigh}>
@@ -292,91 +290,85 @@ function NewThreatModelScreen() {
   );
   const heading = phase === "configuration" ? title : editableHeading;
 
+  // Only the content and the footer change from step to step; the frame,
+  // heading and stepper are the same.
+  let content: ReactNode;
+  let footer: ReactNode;
+  if (phase === "configuration") {
+    content = (
+      <ConfigurationStep
+        name={name}
+        onNameChange={setName}
+        provider={provider}
+        onProviderChange={setProvider}
+        showValidation={showValidation}
+        onFilesChange={setFilesByField}
+      />
+    );
+    footer = (
+      <WizardFooter
+        onPrevious={handlePrevious}
+        onNext={handleNext}
+        nextLabel={tConfiguration("analyzeButton")}
+        disableNext={!name.trim() || files.length === 0}
+      />
+    );
+  } else if (phase === "processing") {
+    content = (
+      <ProcessingStep
+        requestDone={requestDone}
+        error={analysisError}
+        onRetry={() => void parseArchitecture()}
+        onComplete={markProcessingComplete}
+      />
+    );
+    footer = (
+      <WizardFooter
+        onPrevious={handlePrevious}
+        onNext={handleNext}
+        disableNext={!processingComplete}
+        isNextLoading={!processingComplete && !analysisError}
+      />
+    );
+  } else if (phase === "inference") {
+    content = (
+      <Stack space={24}>
+        <InferenceStep
+          nodes={inferenceNodes}
+          edges={inferenceEdges}
+          warnings={warnings}
+          framework={sourceFramework}
+          onNodesChange={(ns) => {
+            setInferenceNodes(ns);
+            setDirty(true);
+          }}
+          onEdgesChange={(es) => {
+            setInferenceEdges(es);
+            setDirty(true);
+          }}
+        />
+        {reanalyzeError && <InlineError message={reanalyzeError} />}
+      </Stack>
+    );
+    footer = (
+      <WizardFooter
+        onPrevious={handlePrevious}
+        onNext={handleNext}
+        nextLabel={tInference("viewResults")}
+        disableNext={reanalyzing}
+        isNextLoading={reanalyzing}
+      />
+    );
+  } else {
+    content = <ResultsStep result={shownResult} stepTitle={tWizard("steps.results")} />;
+    footer = <WizardFooter onPrevious={handlePrevious} onNext={handleNext} hideNext />;
+  }
+
   return (
     <div ref={rootRef} style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
-      {phase === "configuration" ? (
-        <ContainedStep
-          heading={heading}
-          stepper={stepper}
-          footer={
-            <WizardFooter
-              onPrevious={handlePrevious}
-              onNext={handleNext}
-              nextLabel={tConfiguration("analyzeButton")}
-              disableNext={!name.trim() || files.length === 0}
-            />
-          }
-        >
-          <ConfigurationStep
-            name={name}
-            onNameChange={setName}
-            provider={provider}
-            onProviderChange={setProvider}
-            showValidation={showValidation}
-            onFilesChange={setFilesByField}
-          />
-        </ContainedStep>
-      ) : phase === "processing" ? (
-        <ContainedStep
-          heading={heading}
-          stepper={stepper}
-          footer={
-            <WizardFooter
-              onPrevious={handlePrevious}
-              onNext={handleNext}
-              disableNext={!processingComplete}
-              isNextLoading={!processingComplete && !analysisError}
-            />
-          }
-        >
-          <ProcessingStep
-            requestDone={requestDone}
-            error={analysisError}
-            onRetry={() => void parseArchitecture()}
-            onComplete={markProcessingComplete}
-          />
-        </ContainedStep>
-      ) : phase === "inference" ? (
-        <ContainedStep
-          heading={heading}
-          stepper={stepper}
-          footer={
-            <WizardFooter
-              onPrevious={handlePrevious}
-              onNext={handleNext}
-              nextLabel={tInference("viewResults")}
-              disableNext={reanalyzing}
-              isNextLoading={reanalyzing}
-            />
-          }
-        >
-          <Stack space={24}>
-            <InferenceStep
-              nodes={inferenceNodes}
-              edges={inferenceEdges}
-              warnings={warnings}
-              framework={sourceFramework}
-              onNodesChange={(ns) => {
-                setInferenceNodes(ns);
-                setDirty(true);
-              }}
-              onEdgesChange={(es) => {
-                setInferenceEdges(es);
-                setDirty(true);
-              }}
-            />
-            {reanalyzeError && <InlineError message={reanalyzeError} />}
-          </Stack>
-        </ContainedStep>
-      ) : (
-        <ContainedStep
-          heading={heading}
-          stepper={stepper}
-          footer={<WizardFooter onPrevious={handlePrevious} onNext={handleNext} hideNext />}
-        >
-          <ResultsStep result={shownResult} hideTitle stepTitle={tWizard("steps.results")} />
-        </ContainedStep>
-      )}
+      <ContainedStep heading={heading} stepper={stepper} footer={footer}>
+        {content}
+      </ContainedStep>
     </div>
   );
 }
