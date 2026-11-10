@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { toFindingPathGraph } from "./adapters";
-import { getFinding } from "./agentHound";
+import { getFinding, renameAnalysis } from "./agentHound";
 import type { BackendFinding, FindingDetailResponse } from "./types";
 
 const backendFinding: BackendFinding = {
@@ -66,6 +66,34 @@ describe("getFinding", () => {
     );
 
     await expect(getFinding("a1", "x")).rejects.toMatchObject({ code: "FINDING_NOT_FOUND", status: 404 });
+  });
+});
+
+describe("renameAnalysis", () => {
+  it("PATCHes the analysis with the new name as JSON", async () => {
+    const item = { analysis_id: "a/1", name: "Renamed" };
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify(item), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const res = await renameAnalysis("a/1", "Renamed");
+
+    expect(res).toEqual(item);
+    expect(fetchMock).toHaveBeenCalledWith("http://localhost:8000/analyses/a%2F1", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "Renamed" }),
+    });
+  });
+
+  it("surfaces INVALID_NAME from the error envelope", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(JSON.stringify({ error: { code: "INVALID_NAME", message: "Empty." } }), { status: 400 }),
+      ),
+    );
+
+    await expect(renameAnalysis("a1", " ")).rejects.toMatchObject({ code: "INVALID_NAME", status: 400 });
   });
 });
 

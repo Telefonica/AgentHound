@@ -69,6 +69,11 @@ class Edge(BaseModel):
     )
 
 
+# Longest analysis name the API accepts, on create and on rename. The name is
+# stored with the analysis and returned in every listing row.
+MAX_NAME_LENGTH = 200
+
+
 class Metadata(BaseModel):
     name: str = Field(default="Unnamed architecture")
     uploaded_at: datetime = Field(
@@ -223,6 +228,16 @@ class AnalyzeRequest(BaseModel):
 
     nodes: list[AnalyzeNode] = Field(default_factory=list)
     edges: list[AnalyzeEdge] = Field(default_factory=list)
+
+
+class RenameRequest(BaseModel):
+    """Body of PATCH /analyses/{id}: the analysis' new name."""
+
+    name: str = Field(
+        ...,
+        max_length=MAX_NAME_LENGTH,
+        description="New analysis name; surrounding whitespace is trimmed.",
+    )
 
 
 # --- error envelope (spec section 13) ---

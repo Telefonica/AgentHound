@@ -1,6 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { mockOpsDestructiveAnalysis, OPS_DESTRUCTIVE_ID } from "./mocks";
-import { canvas, settle, WITHOUT_GLOW } from "./screen";
+import { canvas, settle, settledViewport, WITHOUT_GLOW } from "./screen";
 
 async function openResults(page: Page) {
   await page.goto(`/tests/${OPS_DESTRUCTIVE_ID}`);
@@ -163,6 +163,9 @@ test.describe("Finding route highlight", () => {
     await row(page, "FH-011 #2").click();
 
     await expect(routePanel(page)).toContainText("FH-011 #2");
+    // Under load the graph was still fitting the route when the screenshot
+    // started, so it never got two equal frames within the timeout.
+    await settledViewport(page);
     await expect(canvas(page)).toHaveScreenshot("graph-fh-011-2-dark.png", WITHOUT_GLOW);
   });
 

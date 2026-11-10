@@ -13,7 +13,7 @@ from fastapi import APIRouter, File, Form, UploadFile
 
 from ...core.coverage import analysis_warnings
 from ...core.graph.serializer import serialize_graph
-from ...core.ir.models import AnalyzeRequest
+from ...core.ir.models import MAX_NAME_LENGTH, AnalyzeRequest, RenameRequest
 from ...core.pipeline import analyze_graph, analyze_stored, parse_text
 from ...core.rules.grouping import group_findings
 from ...core.storage.repository import repository
@@ -48,6 +48,7 @@ def create_analysis(
     framework: str | None = Form(default=None, description="Optional adapter override."),
     name: str | None = Form(
         default=None,
+        max_length=MAX_NAME_LENGTH,
         description="Optional analysis name; overrides the YAML's metadata.name when provided.",
     ),
 ) -> dict:
@@ -113,11 +114,36 @@ def get_analysis(analysis_id: str) -> dict:
     return _list_item(stored)
 
 
+# Plain def (not async): the read + disk write are synchronous, so FastAPI runs
+# the handler in its threadpool rather than blocking the loop.
+@router.patch("/analyses/{analysis_id}", summary="Rename a stored analysis")
+def rename_analysis(analysis_id: str, request: RenameRequest) -> dict:
+    name = request.name.strip()
+    if not name:
+        raise as_http_error("INVALID_NAME", "The analysis name cannot be empty.", status_code=400)
+    # Locked so a rename and an analyze of the same analysis cannot interleave
+    # and save over each other with a stale copy.
+    with repository.locked(analysis_id):
+        stored = repository.get(analysis_id)
+        if stored is None:
+            raise as_http_error("ANALYSIS_NOT_FOUND", f"No analysis {analysis_id}.", status_code=404)
+        # Save a renamed copy rather than mutating the cached result in place,
+        # so a failed write leaves the cache matching what is on disk.
+        metadata = stored.ir.metadata.model_copy(update={"name": name})
+        renamed = stored.model_copy(update={"ir": stored.ir.model_copy(update={"metadata": metadata})})
+        repository.save(renamed)
+    return _list_item(renamed)
+
+
 # Plain def (not async): the delete does a synchronous cache pop + disk unlink,
 # so FastAPI runs it in its threadpool rather than blocking the loop.
 @router.delete("/analyses/{analysis_id}", summary="Delete a stored analysis")
 def delete_analysis(analysis_id: str) -> dict:
-    if not repository.delete(analysis_id):
+    # Locked so an analyze in flight cannot save the analysis back after it
+    # has been deleted.
+    with repository.locked(analysis_id):
+        deleted = repository.delete(analysis_id)
+    if not deleted:
         raise as_http_error("ANALYSIS_NOT_FOUND", f"No analysis {analysis_id}.", status_code=404)
     return {"analysis_id": analysis_id, "status": "deleted"}
 
@@ -129,21 +155,24 @@ def delete_analysis(analysis_id: str) -> dict:
     summary="Run the rule engine, optionally over an edited node/edge set, overwriting the analysis",
 )
 def analyze_analysis(analysis_id: str, request: AnalyzeRequest | None = None) -> dict:
-    stored = repository.get(analysis_id)
-    if stored is None:
-        raise as_http_error("ANALYSIS_NOT_FOUND", f"No analysis {analysis_id}.", status_code=404)
-    # An empty body (or none) analyses the stored parsed graph as-is -- the
-    # first run when the user made no edits. An all-empty edits payload is
-    # deliberately treated the same: the UI never produces it (agent nodes are
-    # not removable, so a real edited graph always has nodes), so this only
-    # guards against an accidental empty body rather than meaning "analyse an
-    # empty graph". A body with nodes/edges is the user's edited graph; a
-    # malformed one (dangling edge, unknown capability) raises IRValidationError,
-    # mapped to HTTP 400 by the handler.
-    if request is None or (not request.nodes and not request.edges):
-        result = analyze_stored(stored)
-    else:
-        result = analyze_graph(stored, request.nodes, request.edges)
+    # Locked from the read to the save: the analysis is saved back whole, so a
+    # rename landing in between would otherwise be overwritten with the old name.
+    with repository.locked(analysis_id):
+        stored = repository.get(analysis_id)
+        if stored is None:
+            raise as_http_error("ANALYSIS_NOT_FOUND", f"No analysis {analysis_id}.", status_code=404)
+        # An empty body (or none) analyses the stored parsed graph as-is -- the
+        # first run when the user made no edits. An all-empty edits payload is
+        # deliberately treated the same: the UI never produces it (agent nodes
+        # are not removable, so a real edited graph always has nodes), so this
+        # only guards against an accidental empty body rather than meaning
+        # "analyse an empty graph". A body with nodes/edges is the user's edited
+        # graph; a malformed one (dangling edge, unknown capability) raises
+        # IRValidationError, mapped to HTTP 400 by the handler.
+        if request is None or (not request.nodes and not request.edges):
+            result = analyze_stored(stored)
+        else:
+            result = analyze_graph(stored, request.nodes, request.edges)
     groups = group_findings(result.findings)
     return {
         "analysis_id": result.ir.analysis_id,

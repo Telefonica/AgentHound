@@ -1,16 +1,19 @@
 "use client";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ProgressBarStepped, Text8, skinVars } from "@telefonica/mistica";
+import { Box, Boxed, Inline, Stack, Stepper, Text8, skinVars } from "@telefonica/mistica";
 import ConfigurationStep from "@/components/threat-model/ConfigurationStep";
 import ProcessingStep from "@/components/threat-model/ProcessingStep";
 import InferenceStep from "@/components/threat-model/InferenceStep";
 import ResultsStep from "@/components/threat-model/ResultsStep";
 import WizardFooter from "@/components/threat-model/WizardFooter";
+import RenameTestButton from "@/components/threat-model/RenameTestButton";
+import { WIZARD_WIDTH_CLASS } from "@/components/threat-model/wizardLayout";
 import { PROVIDERS, YAML_COUNT } from "@/lib/threatModelData";
 import { buildCrewaiUpload } from "@/lib/crewai";
 import { analyze, createAnalysis, getGraph } from "@/lib/api/agentHound";
+import { useAnalysisName } from "@/hooks/useAnalysisName";
 import { loadSolution } from "@/lib/api/loadAnalysis";
 import {
   toAnalyzeRequest,
@@ -25,12 +28,12 @@ import InlineError from "@/components/ui/InlineError";
 import { logger } from "@/lib/logger";
 import type { GraphEdge, GraphNode, WizardPhase } from "@/types/ThreatModel";
 
-const STEP_COUNT = 4;
+/** Position of each phase in the stepper, 0-based. */
 const STEP_INDEX: Record<WizardPhase, number> = {
-  configuration: 1,
-  processing: 2,
-  inference: 3,
-  results: 4,
+  configuration: 0,
+  processing: 1,
+  inference: 2,
+  results: 3,
 };
 
 // Frameworks the backend has a dedicated adapter for, including the explicit
@@ -38,13 +41,65 @@ const STEP_INDEX: Record<WizardPhase, number> = {
 // so the backend falls back to auto-detection.
 const BACKEND_FRAMEWORKS = new Set(["crewai", "dify", "langgraph", "generic"]);
 
+/**
+ * Frame shared by every wizard step: the title (48 above, 40 below), then one
+ * container that holds the stepper and the step content, with the footer
+ * pinned underneath.
+ */
+function ContainedStep({
+  heading,
+  stepper,
+  footer,
+  children,
+}: {
+  heading: ReactNode;
+  stepper: ReactNode;
+  footer: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, paddingLeft: 32, paddingRight: 32, paddingBottom: 32 }}>
+      <Box paddingTop={48} paddingBottom={40}>
+        {heading}
+      </Box>
+      <Box paddingBottom={32}>
+        <div className={WIZARD_WIDTH_CLASS}>
+          <Boxed width="100%">
+            <Box paddingX={32} paddingY={40}>
+              <Stack space={56}>
+                {stepper}
+                {children}
+              </Stack>
+            </Box>
+          </Boxed>
+        </div>
+      </Box>
+      {footer}
+    </div>
+  );
+}
+
 function NewThreatModelScreen() {
   const router = useRouter();
   const tWizard = useTranslations("wizard");
   const tConfiguration = useTranslations("configuration");
   const tInference = useTranslations("inference");
+  const stepLabels = [
+    tWizard("steps.configuration"),
+    tWizard("steps.analysis"),
+    tWizard("steps.capabilities"),
+    tWizard("steps.results"),
+  ];
   const [phase, setPhase] = useState<WizardPhase>("configuration");
-  const [name, setName] = useState("");
+  const {
+    name,
+    getName,
+    setName,
+    rename: renameTest,
+    attach: attachName,
+    detach: detachName,
+    saveFailed: renameFailed,
+  } = useAnalysisName();
   const [provider, setProvider] = useState(PROVIDERS[0]?.value ?? "crewai");
   const [showValidation, setShowValidation] = useState(false);
   // Uploads keyed by field ("workflow" for single-file frameworks; "agents" +
@@ -95,6 +150,7 @@ function NewThreatModelScreen() {
   const parseArchitecture = useCallback(async () => {
     setResult(null);
     setAnalysisId(null);
+    detachName();
     setRequestDone(false);
     setProcessingComplete(false);
     setAnalysisError(null);
@@ -118,7 +174,10 @@ function NewThreatModelScreen() {
     }
     const framework = BACKEND_FRAMEWORKS.has(provider) ? provider : undefined;
     try {
-      const created = await createAnalysis(file, { framework, name });
+      const created = await createAnalysis(file, { framework, name: getName() });
+      // From here on renames are saved, and one made while the parse ran is
+      // saved now.
+      attachName(created.analysis_id, created.name);
       const graph = await getGraph(created.analysis_id);
       setAnalysisId(created.analysis_id);
       setInferenceNodes(toGraphNodes(graph.nodes));
@@ -132,7 +191,7 @@ function NewThreatModelScreen() {
         err instanceof ApiError || err instanceof Error ? err.message : "Parsing failed.";
       setAnalysisError(message);
     }
-  }, [filesByField, files, provider, name]);
+  }, [filesByField, files, provider, getName, attachName, detachName]);
 
   // Stage 2 (leaving Inference for Results): run the analysis if it has not run
   // yet, or re-run it if the capabilities changed since the last run; otherwise
@@ -198,83 +257,118 @@ function NewThreatModelScreen() {
     else close();
   };
 
-  const heading = (
+  // The results (and the reports exported from them) carry the header's name,
+  // not the one in the analyze response, which a rename sent while the
+  // analysis ran can make out of date.
+  const shownResult = useMemo(() => (result ? { ...result, name: name.trim() || result.name } : null), [result, name]);
+
+  const stepper = <Stepper steps={stepLabels} currentIndex={STEP_INDEX[phase]} aria-label={tWizard("progressLabel")} />;
+
+  const title = (
     <Text8 as="h1" color={skinVars.colors.neutralHigh}>
       {name.trim() || tWizard("untitled")}
     </Text8>
   );
+  // From the Analysis step on the test already exists, so the title gets a
+  // pencil that opens the rename dialog.
+  // A failed rename is announced: the alert region is always there, so screen
+  // readers pick up the message when it is filled in.
+  const editableHeading = (
+    <div>
+      <Inline space={16} alignItems="center" expand={1}>
+        {title}
+        <RenameTestButton name={name} onRename={renameTest} />
+      </Inline>
+      <div role="alert">
+        {renameFailed && (
+          <Box paddingTop={8}>
+            <InlineError message={tWizard("rename.error")} />
+          </Box>
+        )}
+      </div>
+    </div>
+  );
+  const heading = phase === "configuration" ? title : editableHeading;
+
+  // Only the content and the footer change from step to step; the frame,
+  // heading and stepper are the same.
+  let content: ReactNode;
+  let footer: ReactNode;
+  if (phase === "configuration") {
+    content = (
+      <ConfigurationStep
+        name={name}
+        onNameChange={setName}
+        provider={provider}
+        onProviderChange={setProvider}
+        showValidation={showValidation}
+        onFilesChange={setFilesByField}
+      />
+    );
+    footer = (
+      <WizardFooter
+        onPrevious={handlePrevious}
+        onNext={handleNext}
+        nextLabel={tConfiguration("analyzeButton")}
+        disableNext={!name.trim() || files.length === 0}
+      />
+    );
+  } else if (phase === "processing") {
+    content = (
+      <ProcessingStep
+        requestDone={requestDone}
+        error={analysisError}
+        onRetry={() => void parseArchitecture()}
+        onComplete={markProcessingComplete}
+      />
+    );
+    footer = (
+      <WizardFooter
+        onPrevious={handlePrevious}
+        onNext={handleNext}
+        disableNext={!processingComplete}
+        isNextLoading={!processingComplete && !analysisError}
+      />
+    );
+  } else if (phase === "inference") {
+    content = (
+      <Stack space={24}>
+        <InferenceStep
+          nodes={inferenceNodes}
+          edges={inferenceEdges}
+          warnings={warnings}
+          framework={sourceFramework}
+          onNodesChange={(ns) => {
+            setInferenceNodes(ns);
+            setDirty(true);
+          }}
+          onEdgesChange={(es) => {
+            setInferenceEdges(es);
+            setDirty(true);
+          }}
+        />
+        {reanalyzeError && <InlineError message={reanalyzeError} />}
+      </Stack>
+    );
+    footer = (
+      <WizardFooter
+        onPrevious={handlePrevious}
+        onNext={handleNext}
+        nextLabel={tInference("viewResults")}
+        disableNext={reanalyzing}
+        isNextLoading={reanalyzing}
+      />
+    );
+  } else {
+    content = <ResultsStep result={shownResult} stepTitle={tWizard("steps.results")} />;
+    footer = <WizardFooter onPrevious={handlePrevious} onNext={handleNext} hideNext />;
+  }
 
   return (
     <div ref={rootRef} style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
-      {phase === "processing" ? (
-        <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, paddingTop: 32, paddingLeft: 32, paddingRight: 32, paddingBottom: 32, gap: 24 }}>
-          {/* Processing is its own step (Analyzing), between Configuration and the
-              Agents step, so the stepper and footer stay visible like any step. */}
-          {heading}
-          <ProgressBarStepped steps={STEP_COUNT} currentStep={STEP_INDEX[phase]} aria-label={tWizard("progressLabel")} />
-          <ProcessingStep
-            requestDone={requestDone}
-            error={analysisError}
-            onRetry={() => void parseArchitecture()}
-            counts={result?.counts ?? null}
-            onComplete={markProcessingComplete}
-          />
-          <WizardFooter
-            onPrevious={handlePrevious}
-            onNext={handleNext}
-            disableNext={!processingComplete}
-            isNextLoading={!processingComplete && !analysisError}
-          />
-        </div>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, paddingTop: 24, paddingLeft: 32, paddingRight: 32, paddingBottom: 32, gap: 32 }}>
-          {heading}
-          <ProgressBarStepped steps={STEP_COUNT} currentStep={STEP_INDEX[phase]} aria-label={tWizard("progressLabel")} />
-
-          {phase === "configuration" && (
-            <ConfigurationStep
-              name={name}
-              onNameChange={setName}
-              provider={provider}
-              onProviderChange={setProvider}
-              showValidation={showValidation}
-              onFilesChange={setFilesByField}
-            />
-          )}
-          {phase === "inference" && (
-            <>
-              <InferenceStep
-                nodes={inferenceNodes}
-                edges={inferenceEdges}
-                warnings={warnings}
-                framework={sourceFramework}
-                onNodesChange={(ns) => {
-                  setInferenceNodes(ns);
-                  setDirty(true);
-                }}
-                onEdgesChange={(es) => {
-                  setInferenceEdges(es);
-                  setDirty(true);
-                }}
-              />
-              {reanalyzeError && <InlineError message={reanalyzeError} />}
-            </>
-          )}
-          {phase === "results" && <ResultsStep result={result} hideTitle />}
-
-          <WizardFooter
-            onPrevious={handlePrevious}
-            onNext={handleNext}
-            hideNext={phase === "results"}
-            nextLabel={phase === "configuration" ? tConfiguration("analyzeButton") : phase === "inference" ? tInference("viewResults") : undefined}
-            disableNext={
-              (phase === "configuration" && (!name.trim() || files.length === 0)) ||
-              (phase === "inference" && reanalyzing)
-            }
-            isNextLoading={phase === "inference" && reanalyzing}
-          />
-        </div>
-      )}
+      <ContainedStep heading={heading} stepper={stepper} footer={footer}>
+        {content}
+      </ContainedStep>
     </div>
   );
 }

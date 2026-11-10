@@ -8,23 +8,26 @@ import {
   Box,
   Boxed,
   ButtonPrimary,
-  DataCard,
   Grid,
   IconAddMoreRegular,
+  IconBugFilled,
+  IconChemistryFilled,
+  IconPodiumRegular,
+  IconSearchFileFilled,
   Inline,
   Row,
   RowList,
   Spinner,
   Stack,
-  Tag,
+  Tabs,
   Text2,
   Text6,
-  Text7,
-  Text8,
   skinVars,
   useTheme,
 } from "@telefonica/mistica";
-import ContentLayout from "@/components/layout/ContentLayout";
+import DashboardPage from "@/components/layout/DashboardPage";
+import KpiCard from "@/components/ui/KpiCard";
+import SeverityBadge from "@/components/threat-model/SeverityBadge";
 import InlineError from "@/components/ui/InlineError";
 import { listAnalyses } from "@/lib/api/agentHound";
 import type { AnalysisListItem } from "@/lib/api/types";
@@ -44,6 +47,7 @@ export default function ResultsScreen() {
   const [error, setError] = useState(false);
   // Bumped by retry to re-run the fetch effect.
   const [reloadKey, setReloadKey] = useState(0);
+  const [tab, setTab] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -78,182 +82,212 @@ export default function ResultsScreen() {
   const criticalColor = isDarkMode ? critical.accentDark : critical.accentLight;
 
   const kpis = [
-    { key: "totalTests", value: agg.totalTests, color: skinVars.colors.neutralHigh },
-    { key: "totalFindings", value: agg.totalFindings, color: skinVars.colors.neutralHigh },
-    { key: "totalCritical", value: agg.totalCritical, color: criticalColor },
-    { key: "criticalRate", value: `${agg.criticalRate}%`, color: criticalColor },
-    { key: "avgMaxScore", value: agg.avgMaxScore, color: skinVars.colors.neutralHigh },
+    {
+      key: "totalTests",
+      value: agg.totalTests,
+      color: skinVars.colors.neutralHigh,
+      Icon: IconChemistryFilled,
+      iconColor: skinVars.colors.brand,
+    },
+    {
+      key: "criticalRate",
+      value: agg.criticalRate,
+      unit: "%",
+      color: criticalColor,
+      Icon: IconChemistryFilled,
+      iconColor: criticalColor,
+      info: true,
+    },
+    {
+      key: "totalFindings",
+      value: agg.totalFindings,
+      color: skinVars.colors.neutralHigh,
+      Icon: IconSearchFileFilled,
+      iconColor: skinVars.colors.brand,
+    },
+    {
+      key: "totalCritical",
+      value: agg.totalCritical,
+      color: criticalColor,
+      Icon: IconBugFilled,
+      iconColor: criticalColor,
+    },
+    {
+      key: "avgMaxScore",
+      value: agg.avgMaxScore,
+      color: skinVars.colors.neutralHigh,
+      Icon: IconPodiumRegular,
+      iconColor: skinVars.colors.brand,
+      info: true,
+    },
   ] as const;
 
   // Order of the stacked severity segments in each framework bar, worst first.
   const SEVERITY_SEGMENTS = ["critical", "high", "medium", "low"] as const;
 
-  return (
-    <ContentLayout paddingTop={107}>
-      <Box paddingX={32}>
-        <Stack space={48}>
-          <Stack space={4}>
-            <Text8 as="h1" color={skinVars.colors.neutralHigh}>
-              {t("title")}
-            </Text8>
-            <Text2 regular color={skinVars.colors.textSecondary}>
-              {t("subtitle")}
-            </Text2>
-          </Stack>
+  const showKpis = !loading && !error && agg.totalTests > 0;
+  const kpiRow = showKpis ? (
+    <Grid columns={5} gap={16}>
+      {kpis.map((kpi) => (
+        <KpiCard
+          key={kpi.key}
+          Icon={kpi.Icon}
+          iconColor={kpi.iconColor}
+          title={t(`kpis.${kpi.key}`)}
+          value={kpi.value}
+          unit={"unit" in kpi ? kpi.unit : undefined}
+          info={
+            "info" in kpi
+              ? {
+                  label: t("kpiInfoLabel", { name: t(`kpis.${kpi.key}`) }),
+                  description: t(`kpiInfo.${kpi.key}`),
+                }
+              : undefined
+          }
+          valueColor={kpi.color}
+        />
+      ))}
+    </Grid>
+  ) : undefined;
 
-          {loading ? (
-            <Box paddingY={48}>
-              <Align x="center">
-                <Spinner size={32} color={skinVars.colors.brand} />
-              </Align>
-            </Box>
-          ) : error ? (
-            <InlineError message={t("loadError")} onRetry={retry} />
-          ) : agg.totalTests === 0 ? (
+  return (
+    <DashboardPage title={t("title")} kpis={kpiRow}>
+      {loading ? (
+        <Box paddingY={48}>
+          <Align x="center">
+            <Spinner size={32} color={skinVars.colors.brand} />
+          </Align>
+        </Box>
+      ) : error ? (
+        <InlineError message={t("loadError")} onRetry={retry} />
+      ) : agg.totalTests === 0 ? (
+        <Boxed>
+          <Box padding={24}>
+            <Stack space={24}>
+              <Stack space={8}>
+                <Text6>{t("emptyTitle")}</Text6>
+                <Text2 regular color={skinVars.colors.textSecondary}>
+                  {t("emptyDescription")}
+                </Text2>
+              </Stack>
+              <ButtonPrimary StartIcon={IconAddMoreRegular} onPress={() => router.push("/tests/new")}>
+                {tOverview("newThreatModel")}
+              </ButtonPrimary>
+            </Stack>
+          </Box>
+        </Boxed>
+      ) : (
+        <Stack space={16}>
+          <Tabs
+            selectedIndex={tab}
+            onChange={setTab}
+            tabs={[{ text: t("worstTitle") }, { text: t("frameworkTitle") }]}
+          />
+          {tab === 0 ? (
             <Boxed>
-              <Box padding={24}>
-                <Stack space={24}>
-                  <Stack space={8}>
-                    <Text6>{t("emptyTitle")}</Text6>
-                    <Text2 regular color={skinVars.colors.textSecondary}>
-                      {t("emptyDescription")}
-                    </Text2>
-                  </Stack>
-                  <ButtonPrimary
-                    StartIcon={IconAddMoreRegular}
-                    onPress={() => router.push("/tests/new")}
-                  >
-                    {tOverview("newThreatModel")}
-                  </ButtonPrimary>
-                </Stack>
+              <Box paddingX={8} paddingY={8}>
+                <RowList>
+                  {agg.worstTests.map((test) => {
+                    const style = SEVERITY_STYLES[test.severity];
+                    return (
+                      <Row
+                        key={test.id}
+                        title={test.name}
+                        description={`${test.framework} · ${t("maxScoreLabel", { score: test.maxScore })}`}
+                        onPress={() => router.push(`/tests/${test.id}?from=results`)}
+                        right={
+                          <Align y="center" height="100%">
+                            <Inline space={8} alignItems="center">
+                              <Box width={20}>
+                                <Text2
+                                  medium
+                                  color={isDarkMode ? style.accentDark : style.accentLight}
+                                  textAlign="right"
+                                >
+                                  {test.findings > 0 ? test.findings : ""}
+                                </Text2>
+                              </Box>
+                              <SeverityBadge severity={test.severity} withIcon>
+                                {tSeverity(test.severity)}
+                              </SeverityBadge>
+                            </Inline>
+                          </Align>
+                        }
+                      />
+                    );
+                  })}
+                </RowList>
               </Box>
             </Boxed>
           ) : (
-            <Stack space={48}>
-              <Grid columns={5} gap={16}>
-                {kpis.map(({ key, value, color }) => (
-                  <DataCard
-                    key={key}
-                    width="100%"
-                    title={t(`kpis.${key}`)}
-                    slot={
-                      <Box paddingTop={40} paddingBottom={24}>
-                        <Text7 color={color}>{value}</Text7>
-                      </Box>
-                    }
-                  />
-                ))}
-              </Grid>
-
-              <Stack space={16}>
-                <Text6 as="h2">{t("worstTitle")}</Text6>
-                <Boxed>
-                  <Box paddingX={8} paddingY={8}>
-                    <RowList>
-                      {agg.worstTests.map((test) => {
-                        const style = SEVERITY_STYLES[test.severity];
-                        return (
-                          <Row
-                            key={test.id}
-                            title={test.name}
-                            description={`${test.framework} · ${t("maxScoreLabel", { score: test.maxScore })}`}
-                            onPress={() => router.push(`/tests/${test.id}?from=results`)}
-                            right={
-                              <Align y="center" height="100%">
-                                <Inline space={8} alignItems="center">
-                                  <Box width={20}>
-                                    <Text2
-                                      medium
-                                      color={isDarkMode ? style.accentDark : style.accentLight}
-                                      textAlign="right"
-                                    >
-                                      {test.findings > 0 ? test.findings : ""}
-                                    </Text2>
-                                  </Box>
-                                  <Tag backgroundColor={style.background} textColor={style.text}>
-                                    {tSeverity(test.severity)}
-                                  </Tag>
-                                </Inline>
-                              </Align>
-                            }
-                          />
-                        );
-                      })}
-                    </RowList>
-                  </Box>
-                </Boxed>
-              </Stack>
-
-              <Stack space={16}>
-                <Inline space="between" alignItems="center">
-                  <Text6 as="h2">{t("frameworkTitle")}</Text6>
-                  <Inline space={16} alignItems="center" wrap verticalSpace={8}>
-                    {SEVERITY_SEGMENTS.map((sev) => (
-                      <Inline key={sev} space={4} alignItems="center">
-                        <span
-                          style={{
-                            display: "block",
-                            width: 10,
-                            height: 10,
-                            borderRadius: 2,
-                            backgroundColor: SEVERITY_STYLES[sev].background,
-                          }}
-                        />
-                        <Text2 regular color={skinVars.colors.textSecondary}>
-                          {tSeverity(sev)}
-                        </Text2>
-                      </Inline>
-                    ))}
-                  </Inline>
+            <Stack space={16}>
+              <Align x="end">
+                <Inline space={16} alignItems="center" wrap verticalSpace={8}>
+                  {SEVERITY_SEGMENTS.map((sev) => (
+                    <Inline key={sev} space={4} alignItems="center">
+                      <span
+                        style={{
+                          display: "block",
+                          width: 10,
+                          height: 10,
+                          borderRadius: 2,
+                          backgroundColor: SEVERITY_STYLES[sev].background,
+                        }}
+                      />
+                      <Text2 regular color={skinVars.colors.textSecondary}>
+                        {tSeverity(sev)}
+                      </Text2>
+                    </Inline>
+                  ))}
                 </Inline>
-                <Boxed>
-                  <Box padding={24}>
-                    <Stack space={24}>
-                      {agg.byFramework.map((fw) => (
-                        <Stack space={8} key={fw.framework}>
-                          <Inline space="between" alignItems="baseline">
-                            <Text2 medium color={skinVars.colors.neutralHigh}>
-                              {fw.framework}
-                            </Text2>
-                            <Text2 regular color={skinVars.colors.textSecondary}>
-                              {t("frameworkRow", { tests: fw.tests, findings: fw.findings })}
-                            </Text2>
-                          </Inline>
-                          <div
-                            style={{
-                              display: "flex",
-                              height: 8,
-                              borderRadius: 4,
-                              backgroundColor: skinVars.colors.neutralLow,
-                              overflow: "hidden",
-                            }}
-                          >
-                            {fw.findings > 0 &&
-                              SEVERITY_SEGMENTS.map((sev) => {
-                                const count = fw[sev];
-                                if (count === 0) return null;
-                                return (
-                                  <div
-                                    key={sev}
-                                    style={{
-                                      height: "100%",
-                                      width: `${(100 * count) / fw.findings}%`,
-                                      backgroundColor: SEVERITY_STYLES[sev].background,
-                                    }}
-                                  />
-                                );
-                              })}
-                          </div>
-                        </Stack>
-                      ))}
-                    </Stack>
-                  </Box>
-                </Boxed>
-              </Stack>
+              </Align>
+              <Boxed>
+                <Box padding={24}>
+                  <Stack space={24}>
+                    {agg.byFramework.map((fw) => (
+                      <Stack space={8} key={fw.framework}>
+                        <Inline space="between" alignItems="baseline">
+                          <Text2 medium color={skinVars.colors.neutralHigh}>
+                            {fw.framework}
+                          </Text2>
+                          <Text2 regular color={skinVars.colors.textSecondary}>
+                            {t("frameworkRow", { tests: fw.tests, findings: fw.findings })}
+                          </Text2>
+                        </Inline>
+                        <div
+                          style={{
+                            display: "flex",
+                            height: 8,
+                            borderRadius: 4,
+                            backgroundColor: skinVars.colors.neutralLow,
+                            overflow: "hidden",
+                          }}
+                        >
+                          {fw.findings > 0 &&
+                            SEVERITY_SEGMENTS.map((sev) => {
+                              const count = fw[sev];
+                              if (count === 0) return null;
+                              return (
+                                <div
+                                  key={sev}
+                                  style={{
+                                    height: "100%",
+                                    width: `${(100 * count) / fw.findings}%`,
+                                    backgroundColor: SEVERITY_STYLES[sev].background,
+                                  }}
+                                />
+                              );
+                            })}
+                        </div>
+                      </Stack>
+                    ))}
+                  </Stack>
+                </Box>
+              </Boxed>
             </Stack>
           )}
         </Stack>
-      </Box>
-    </ContentLayout>
+      )}
+    </DashboardPage>
   );
 }

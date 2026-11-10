@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 
 # Any localhost/127.0.0.1 origin (any port) is allowed by default so a local
@@ -22,7 +23,7 @@ from fastapi.middleware.cors import CORSMiddleware
 _LOCALHOST_ORIGIN_REGEX = r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$"
 
 from . import __version__
-from .api.errors import ApiError, api_error_handler, ir_validation_handler
+from .api.errors import ApiError, api_error_handler, ir_validation_handler, request_validation_handler
 from .api.routes import analyze, capabilities, controls, findings, graphs
 from .core.ir.models import IRValidationError
 
@@ -56,6 +57,7 @@ def create_app() -> FastAPI:
 
     app.add_exception_handler(IRValidationError, ir_validation_handler)
     app.add_exception_handler(ApiError, api_error_handler)
+    app.add_exception_handler(RequestValidationError, request_validation_handler)
 
     app.include_router(analyze.router, tags=["analyses"])
     app.include_router(graphs.router, tags=["graph"])

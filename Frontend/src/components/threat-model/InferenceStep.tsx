@@ -7,13 +7,12 @@ import {
   IconInformationRegular,
   IconRobotRegular,
   Stack,
-  Text1,
-  Text4,
   skinVars,
 } from "@telefonica/mistica";
 import AgentCapabilityCard from "@/components/threat-model/AgentCapabilityCard";
 import AgentEditModal from "@/components/threat-model/AgentEditModal";
 import CoverageWarnings from "@/components/threat-model/CoverageWarnings";
+import StepSection from "@/components/threat-model/StepSection";
 import { groupByAgent } from "@/lib/agentCapabilities";
 import { preloadCapabilityRules } from "@/hooks/useCapabilityRules";
 import type { CoverageWarning } from "@/lib/api/types";
@@ -41,37 +40,36 @@ function InferenceStep({ nodes, edges, warnings, framework, onNodesChange, onEdg
   const isEditing = editingAgentId != null && agents.some((g) => g.agent.id === editingAgentId);
 
   return (
-    <Stack space={24}>
-      <Stack space={4}>
-        <Text4 medium as="h1">{t("heading")}</Text4>
-        <Text1 regular color={skinVars.colors.textSecondary}>{t("subtitle")}</Text1>
-      </Stack>
+    <>
+      <StepSection title={t("heading")} description={t("subtitle")}>
+        <Stack space={16}>
+          <Callout
+            title={t("calloutTitle")}
+            description={t("calloutDesc")}
+            asset={<IconInformationRegular color={skinVars.colors.brand} />}
+          />
 
-      <Callout
-        title={t("calloutTitle")}
-        description={t("calloutDesc")}
-        asset={<IconInformationRegular color={skinVars.colors.brand} />}
-      />
+          <CoverageWarnings warnings={warnings} framework={framework} />
 
-      <CoverageWarnings warnings={warnings} framework={framework} />
-
-      {agentCount === 0 ? (
-        <EmptyState
-          asset={<IconRobotRegular size={32} color={skinVars.colors.brand} />}
-          title={t("emptyTitle")}
-          description={t("emptyDesc")}
-        />
-      ) : (
-        <Grid columns={{ minSize: 320 }} gap={16}>
-          {agents.map((group) => (
-            <AgentCapabilityCard
-              key={group.agent.id}
-              group={group}
-              onEditAgent={setEditingAgentId}
+          {agentCount === 0 ? (
+            <EmptyState
+              asset={<IconRobotRegular size={32} color={skinVars.colors.brand} />}
+              title={t("emptyTitle")}
+              description={t("emptyDesc")}
             />
-          ))}
-        </Grid>
-      )}
+          ) : (
+            <Grid columns={{ minSize: 320 }} gap={16}>
+              {agents.map((group) => (
+                <AgentCapabilityCard
+                  key={group.agent.id}
+                  group={group}
+                  onEditAgent={setEditingAgentId}
+                />
+              ))}
+            </Grid>
+          )}
+        </Stack>
+      </StepSection>
 
       {isEditing && editingAgentId && (
         <AgentEditModal
@@ -86,7 +84,7 @@ function InferenceStep({ nodes, edges, warnings, framework, onNodesChange, onEdg
           onClose={() => setEditingAgentId(null)}
         />
       )}
-    </Stack>
+    </>
   );
 }
 

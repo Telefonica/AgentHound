@@ -38,6 +38,19 @@ export async function getAnalysis(analysisId: string): Promise<AnalysisListItem>
   return apiFetch<AnalysisListItem>(`/analyses/${encodeURIComponent(analysisId)}`);
 }
 
+/** Rename a stored analysis (`PATCH /analyses/{id}`). Returns the same shape as
+ * {@link getAnalysis}, with the new (trimmed) name. */
+export async function renameAnalysis(
+  analysisId: string,
+  name: string,
+): Promise<AnalysisListItem> {
+  return apiFetch<AnalysisListItem>(`/analyses/${encodeURIComponent(analysisId)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+}
+
 /** Delete a stored analysis (`DELETE /analyses/{id}`). */
 export async function deleteAnalysis(analysisId: string): Promise<DeleteAnalysisResponse> {
   return apiFetch<DeleteAnalysisResponse>(`/analyses/${encodeURIComponent(analysisId)}`, {

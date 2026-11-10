@@ -184,7 +184,10 @@ function CapabilityGraph({ analysisId, solved, nodes, edges, findings, attacks, 
 
   return (
     <Stack space={12}>
-      <Inline space={4} alignItems="center">
+      {/* fullWidth renders a block grid: as an inline-grid the row sat in a 24.5px
+          line box, which put the canvas below on a half pixel. expand keeps the
+          text next to the icon instead of spreading the two across the row. */}
+      <Inline space={4} alignItems="center" fullWidth expand={1}>
         <IconSearchRegular size={13} color={skinVars.colors.textSecondary} />
         <Text1 regular color={skinVars.colors.textSecondary}>{t("graphHint")}</Text1>
       </Inline>

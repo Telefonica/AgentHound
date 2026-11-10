@@ -25,9 +25,20 @@ test.describe("Results dashboard screen", () => {
     await expect(page.getByText("50%", { exact: true })).toBeVisible();
     await expect(page.getByText("6.3", { exact: true })).toBeVisible();
     await expect(page.getByText("langgraph · max score 10")).toBeVisible();
-    await expect(page.getByText("2 tests · 30 findings")).toBeVisible();
     await showWholeScreen(page);
     await expect(page).toHaveScreenshot("results-dashboard.png");
+  });
+
+  test("breaks the findings down by framework in its own tab", async ({ page }) => {
+    await mockAnalysesList(page);
+    await openDashboard(page, "Highest-risk tests");
+
+    await page.getByRole("tab", { name: "Findings by framework" }).click();
+
+    await expect(page.getByText("2 tests · 30 findings")).toBeVisible();
+    await page.mouse.move(0, 0);
+    await showWholeScreen(page);
+    await expect(page).toHaveScreenshot("results-dashboard-frameworks.png");
   });
 
   test("reads in Spanish", async ({ page, context, baseURL }) => {

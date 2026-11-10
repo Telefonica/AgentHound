@@ -30,6 +30,9 @@ const ES: typeof EN = {
   inference: "Agentes y capacidades",
 };
 
+/** The elapsed time depends on the machine's speed, so it is masked out of the screenshots. */
+const elapsedTime = (page: Page) => ({ mask: [page.getByText(/^Elapsed time /)] });
+
 async function openNewTest(page: Page, copy = EN) {
   await page.goto("/tests/new");
   await page.getByRole("heading", { name: copy.newTest }).waitFor();
@@ -112,21 +115,29 @@ test.describe("New test screen", () => {
     await page.mouse.move(0, 0);
 
     await expect(page.getByText("100%")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Analyzing" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Next" })).toBeEnabled();
-    await expect(page).toHaveScreenshot("new-test-processing-done.png");
+    await expect(page).toHaveScreenshot("new-test-processing-done.png", elapsedTime(page));
   });
 
   test("shows the parse failure with a retry", async ({ page }) => {
     await mockEndpointError(page, "POST", "/analyses");
+    await page.clock.install();
     await openNewTest(page);
 
     await fillConfiguration(page);
+    // The reasoning log adds a line every 640 ms until the error arrives, so on a
+    // slow run the screenshot caught one line more. Freeze the page's timers:
+    // the error lands with the first line only, however long the request takes.
+    await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1_000));
     await page.getByRole("button", { name: "Analyze" }).click();
-    await page.getByRole("heading", { name: "Parsing failed", level: 1 }).waitFor();
+    // The step's own header (h2) names the failure; the page title (h1) stays the test name.
+    await page.getByRole("heading", { name: "Parsing failed", level: 2 }).waitFor();
     await page.mouse.move(0, 0);
 
     await expect(page.getByRole("button", { name: "Next" })).toBeDisabled();
-    await expect(page).toHaveScreenshot("new-test-processing-error.png");
+    await expect(page.getByRole("button", { name: "Retry" })).toBeVisible();
+    await expect(page).toHaveScreenshot("new-test-processing-error.png", elapsedTime(page));
   });
 
   test("lists every agent with the capabilities extracted from the YAML", async ({ page }) => {

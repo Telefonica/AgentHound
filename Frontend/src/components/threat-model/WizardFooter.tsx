@@ -8,6 +8,7 @@ import {
   skinVars,
 } from "@telefonica/mistica";
 import { useTranslations } from "next-intl";
+import { WIZARD_WIDTH_CLASS } from "@/components/threat-model/wizardLayout";
 
 interface WizardFooterProps {
   onPrevious?: () => void;
@@ -23,7 +24,8 @@ function WizardFooter({ onPrevious, onNext, disablePrevious = false, disableNext
   const t = useTranslations("wizard");
   const resolvedNextLabel = nextLabel ?? t("next");
   return (
-    <div className="rounded-full mt-auto w-full" style={{ backgroundColor: skinVars.colors.backgroundContainer, borderColor: skinVars.colors.border, borderWidth: 1, borderStyle: "solid" }}>
+    // Same width cap as the wizard's container above it.
+    <div className={`rounded-full mt-auto ${WIZARD_WIDTH_CLASS}`} style={{ backgroundColor: skinVars.colors.backgroundContainer, borderColor: skinVars.colors.border, borderWidth: 1, borderStyle: "solid" }}>
       <Box paddingX={32} paddingY={20}>
         <Inline space="between" alignItems="center">
           <ButtonSecondary onPress={() => onPrevious?.()} disabled={disablePrevious} StartIcon={IconArrowLineLeftLight}>

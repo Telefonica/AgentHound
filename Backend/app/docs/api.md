@@ -13,6 +13,10 @@ All error responses use the spec §13 envelope:
 { "error": { "code": "ANALYSIS_NOT_FOUND", "message": "...", "details": {} } }
 ```
 
+A request that fails FastAPI's own validation (a missing field, a wrong type,
+a value over its length limit) is a 422 with code `INVALID_REQUEST`, and
+`details.errors` lists each problem as `{ loc, msg, type }`.
+
 ## POST /analyses  (spec §12.1)
 
 **Parse** an architecture YAML into a stored graph. This is the first of two
@@ -26,8 +30,8 @@ capabilities for editing, then calls `POST .../analyze`). The finding counts in
   - `file` (required) — the architecture YAML.
   - `framework` (optional) — adapter override (`generic`, `crewai`, `dify`,
     `langgraph`); omitted, the framework is auto-detected.
-  - `name` (optional) — analysis name; overrides the YAML's `metadata.name`
-    when provided. Echoed back as `name` in the response.
+  - `name` (optional) — analysis name, at most 200 characters; overrides the
+    YAML's `metadata.name` when provided. Echoed back as `name` in the response.
 
 Response:
 
@@ -137,6 +141,23 @@ The stored analysis is overwritten under the same id, so subsequent
 analyzed (and, if edited, corrected) graph. Errors: `ANALYSIS_NOT_FOUND` (404);
 `INVALID_IR`, `UNKNOWN_CAPABILITY`, `INVALID_NODE_TYPE` (400) for a malformed
 edited graph.
+
+## PATCH /analyses/{analysis_id}
+
+**Rename** a stored analysis. Works at either stage (parsed or analyzed), and a
+later `POST .../analyze` keeps the new name.
+
+- Content-Type: `application/json`
+- Body: `{ "name": "New name" }`. Surrounding whitespace is trimmed. At most
+  200 characters, the same limit as the `name` field of `POST /analyses`.
+
+Returns the same object as `GET /analyses/{analysis_id}` (and a row of
+`GET /analyses`), with the new `name`. Errors: `INVALID_NAME` (400) for an
+empty or blank name; `INVALID_REQUEST` (422) for a missing, non-string or
+over-long name; `ANALYSIS_NOT_FOUND` (404).
+
+A rename, `POST .../analyze` and `DELETE` on the same analysis run one at a
+time, so a rename sent while the analysis runs waits for it and is not lost.
 
 ## GET /analyses/{analysis_id}/graph  (spec §12.2)
 
