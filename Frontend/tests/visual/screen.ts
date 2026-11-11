@@ -12,6 +12,10 @@ export async function settle(page: Page) {
   await page.evaluate(() => document.fonts.ready);
 }
 
+export async function waitForStreamedContent(page: Page) {
+  await expect(page.locator("body > div[hidden][id^='S:']")).toHaveCount(0);
+}
+
 export async function fillAnalysisName(page: Page, label: string, name: string) {
   await expect(async () => {
     await page.getByRole("textbox", { name: label }).fill(name);

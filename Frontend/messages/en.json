@@ -348,6 +348,7 @@
     "absent": "absent",
     "deleteNode": "Delete node",
     "riskScore": "Risk score",
-    "evidence": "Evidence"
+    "evidence": "Evidence",
+    "showRoute": "Show route {id} in the graph"
   }
 }

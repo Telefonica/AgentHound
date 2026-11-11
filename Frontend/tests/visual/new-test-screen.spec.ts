@@ -8,7 +8,7 @@ import {
   mockOpsDestructiveAnalysis,
   OPS_DESTRUCTIVE_ID,
 } from "./mocks";
-import { canvas, fillAnalysisName, settle, showGraphedScreen, showWholeScreen } from "./screen";
+import { canvas, fillAnalysisName, settle, showGraphedScreen, showWholeScreen, waitForStreamedContent } from "./screen";
 
 const OPS_DESTRUCTIVE_YAML = path.join(__dirname, "../../../examples/03_ops_destructive/langgraph.yaml");
 
@@ -36,6 +36,7 @@ const elapsedTime = (page: Page) => ({ mask: [page.getByText(/^Elapsed time /)] 
 async function openNewTest(page: Page, copy = EN) {
   await page.goto("/tests/new");
   await page.getByRole("heading", { name: copy.newTest }).waitFor();
+  await waitForStreamedContent(page);
   await settle(page);
 }
 

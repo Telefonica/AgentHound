@@ -2,7 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 import capabilities from "./fixtures/capabilities.json" with { type: "json" };
 import analysis from "./fixtures/ops-destructive/analysis.json" with { type: "json" };
 import { API_ORIGIN, mockOpsDestructiveAnalysis } from "./mocks";
-import { fillAnalysisName, settle } from "./screen";
+import { fillAnalysisName, settle, waitForStreamedContent } from "./screen";
 
 const CORS = { "Access-Control-Allow-Origin": "*" };
 const YAML = { mimeType: "application/x-yaml", buffer: Buffer.from("agents: {}\n") };
@@ -24,10 +24,10 @@ async function openAgentEditor(page: Page) {
     route.fulfill({ status: 200, headers: CORS, contentType: "application/json", body: JSON.stringify(capabilities) }),
   );
   await page.goto("/tests/new");
+  await waitForStreamedContent(page);
   await fillAnalysisName(page, "Analysis name", "IT Ops");
-  const uploads = page.locator("input[type=file]");
-  await uploads.nth(0).setInputFiles({ name: "agents.yaml", ...YAML });
-  await uploads.nth(0).setInputFiles({ name: "tasks.yaml", ...YAML });
+  await page.getByLabel("agents.yaml", { exact: true }).setInputFiles({ name: "agents.yaml", ...YAML });
+  await page.getByLabel("tasks.yaml", { exact: true }).setInputFiles({ name: "tasks.yaml", ...YAML });
   await page.getByRole("button", { name: "Analyze" }).click();
   await page.getByText("Capability extraction complete").waitFor();
   await page.getByRole("button", { name: "Next" }).click();

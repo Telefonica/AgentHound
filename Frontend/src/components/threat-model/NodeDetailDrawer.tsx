@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
-import { Box, Boxed, Drawer, Inline, Stack, Tag, Text1, skinVars, useTheme } from "@telefonica/mistica";
+import { Box, Boxed, Drawer, Inline, Stack, Tag, Text1, Text2, TextLink, skinVars, useTheme } from "@telefonica/mistica";
 import { FindingId, FindingRoute } from "@/components/threat-model/FindingIdentity";
 import SeverityBadge from "@/components/threat-model/SeverityBadge";
 import { propPositive } from "@/lib/api/adapters";
@@ -14,13 +14,14 @@ interface NodeDetailDrawerProps {
   findingLabelById: Map<string, string>;
   nodesById: Map<string, Pick<GraphNode, "label">>;
   onClose: () => void;
+  onShowRoute?: (findingId: string) => void;
 }
 
 function formatProperty(value: unknown): string {
   return value === null || value === undefined ? "—" : formatValue(value);
 }
 
-function NodeDetailDrawer({ node, findings, findingLabelById, nodesById, onClose }: NodeDetailDrawerProps) {
+function NodeDetailDrawer({ node, findings, findingLabelById, nodesById, onClose, onShowRoute }: NodeDetailDrawerProps) {
   const t = useTranslations("node");
   const tSeverity = useTranslations("overview.severity");
   const { isDarkMode } = useTheme();
@@ -122,10 +123,22 @@ function NodeDetailDrawer({ node, findings, findingLabelById, nodesById, onClose
             <Stack space={8}>
               {nodeFindings.map((f) => (
                 <Boxed key={f.id} dataAttributes={{ testid: "node-finding" }}>
-                  <Box padding={12}>
-                    <Stack space={4}>
+                  <Box padding={16}>
+                    <Stack space={12}>
                       <Inline space={8} alignItems="center" wrap verticalSpace={4}>
-                        <Tag type="error" small>{findingLabelById.get(f.id) ?? f.ruleId}</Tag>
+                        {onShowRoute ? (
+                          <Text2 medium>
+                            <TextLink
+                              style={{ color: skinVars.colors.textPrimary }}
+                              aria-label={t("showRoute", { id: findingLabelById.get(f.id) ?? f.ruleId })}
+                              onPress={() => onShowRoute(f.id)}
+                            >
+                              {findingLabelById.get(f.id) ?? f.ruleId}
+                            </TextLink>
+                          </Text2>
+                        ) : (
+                          <Tag type="error" small>{findingLabelById.get(f.id) ?? f.ruleId}</Tag>
+                        )}
                         <FindingId id={f.id} />
                         <Tag type="inactive" small>{formatSnakeCase(f.category)}</Tag>
                         <SeverityBadge severity={f.severity} small>{tSeverity(f.severity)}</SeverityBadge>
@@ -139,7 +152,7 @@ function NodeDetailDrawer({ node, findings, findingLabelById, nodesById, onClose
                         {f.mitre?.map((tag) => <Tag key={tag} small type="inactive">{tag}</Tag>)}
                       </Inline>
                       {f.evidence && Object.keys(f.evidence).length > 0 && (
-                        <Stack space={2}>
+                        <Stack space={4}>
                           <Text1 medium color={skinVars.colors.textSecondary}>{t("evidence")}</Text1>
                           {Object.entries(f.evidence).map(([key, value]) => (
                             <Inline key={key} space={8}>
