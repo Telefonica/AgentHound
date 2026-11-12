@@ -221,8 +221,9 @@
       "low": "Low finding path",
       "info": "Info finding path",
       "nodeFindings": "Node findings",
-      "nodeFinding": "Top score and how many more",
-      "nodeFindingSample": "max · +N",
+      "nodeFinding": "Top score and number of findings",
+      "nodeFindingSample": "max",
+      "nodeFindingCountSample": "N findings",
       "nodeTypes": "Node types",
       "node": {
         "input": "Entry point",
@@ -344,6 +345,7 @@
   },
   "node": {
     "properties": "Properties",
+    "ownFindings": "Findings on this node",
     "attackPaths": "Attack paths through this node",
     "recommendedControls": "Recommended controls",
     "controlEffect": {

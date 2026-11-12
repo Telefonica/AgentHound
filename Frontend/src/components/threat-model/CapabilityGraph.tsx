@@ -153,6 +153,7 @@ function CapabilityGraph({ analysisId, solved, nodes, edges, findings, attacks, 
     legendNodeFindings: t("legend.nodeFindings"),
     legendNodeFinding: t("legend.nodeFinding"),
     legendNodeFindingSample: t("legend.nodeFindingSample"),
+    legendNodeFindingCountSample: t("legend.nodeFindingCountSample"),
     legendNodeTypes: t("legend.nodeTypes"),
     nodeTypeLabel: {
       input: t("legend.node.input"),
@@ -286,6 +287,7 @@ function CapabilityGraph({ analysisId, solved, nodes, edges, findings, attacks, 
           findings={findings}
           findingLabelById={findingLabelById}
           nodesById={nodesById}
+          edges={edges}
           onClose={closeDrawer}
           onShowRoute={solved ? undefined : showRoute}
         />

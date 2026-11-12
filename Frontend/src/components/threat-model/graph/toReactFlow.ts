@@ -134,14 +134,20 @@ export function findingRoute(finding: Pick<Finding, "path" | "edges">, edges: Gr
   return { nodeIds: [...nodeIds], edgeIds: routeEdges.map((e) => e.id) };
 }
 
+export function nodeFindingId(finding: Pick<Finding, "path" | "edges">, edges: GraphEdge[]): string | undefined {
+  const id = finding.path[0];
+  if (id === undefined || finding.path.some((n) => n !== id) || findingRoute(finding, edges).edgeIds.length > 0) return undefined;
+  return id;
+}
+
 export function nodeFindingMarks(
   findings: Pick<Finding, "path" | "edges" | "severity" | "score">[],
   edges: GraphEdge[],
 ): Map<string, NodeFindingMark> {
   const marks = new Map<string, NodeFindingMark>();
   for (const f of findings) {
-    const id = f.path[0];
-    if (id === undefined || f.path.some((n) => n !== id) || findingRoute(f, edges).edgeIds.length > 0) continue;
+    const id = nodeFindingId(f, edges);
+    if (id === undefined) continue;
     const { severity } = f;
     const mark = marks.get(id);
     if (!mark) {

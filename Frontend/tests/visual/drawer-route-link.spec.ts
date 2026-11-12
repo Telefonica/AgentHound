@@ -15,7 +15,7 @@ test.describe("Drawer route link", () => {
 
     await canvas(page).locator('.react-flow__node[data-id="agent_ops_executor"]').click();
     const dialog = page.getByRole("dialog");
-    const item = dialog.getByTestId("node-finding").first();
+    const item = dialog.getByTestId("node-through-findings").getByTestId("node-finding").first();
     await item.scrollIntoViewIfNeeded();
     await expect(item).toHaveScreenshot("drawer-with-route-link.png");
 

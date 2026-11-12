@@ -20,7 +20,8 @@ test.describe("Node findings", () => {
   test("marks the node the top finding points at, even though no edge carries it", async ({ page }) => {
     await openResults(page);
 
-    await expect(badge(page, "tool_python_interpreter")).toHaveText("9.8 · +2");
+    await expect(badge(page, "tool_python_interpreter")).toHaveText("9.8");
+    await expect(node(page, "tool_python_interpreter").getByTestId("node-finding-count")).toHaveText("3 findings");
     await expect(badge(page, "tool_python_interpreter")).toHaveAttribute("data-severity", "critical");
     await expect(node(page, "tool_python_interpreter").getByTitle("3 findings on this node · max 9.8")).toBeVisible();
     await expect(node(page, "tool_python_interpreter").getByText("3 findings on this node · max 9.8")).toBeAttached();
@@ -29,7 +30,7 @@ test.describe("Node findings", () => {
     await expect(badge(page, "tool_sales_database_read")).toHaveCount(0);
     await expect(badge(page, "tool_python_interpreter").locator("..")).toHaveAttribute("aria-hidden", "true");
     await expect(canvas(page).getByText("Node findings")).toBeVisible();
-    await expect(canvas(page).getByTestId("legend-node-finding")).toHaveText("max · +NTop score and how many more");
+    await expect(canvas(page).getByTestId("legend-node-finding")).toHaveText("maxN findingsTop score and number of findings");
     await expect(canvas(page)).toHaveScreenshot("graph-node-findings.png", WITHOUT_GLOW);
   });
 

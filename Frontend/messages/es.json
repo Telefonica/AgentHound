@@ -221,8 +221,9 @@
       "low": "Ruta de hallazgo bajo",
       "info": "Ruta de hallazgo informativo",
       "nodeFindings": "Hallazgos en nodos",
-      "nodeFinding": "Puntuación máx. y cuántos más hay",
-      "nodeFindingSample": "máx. · +N",
+      "nodeFinding": "Puntuación máx. y nº de hallazgos",
+      "nodeFindingSample": "máx.",
+      "nodeFindingCountSample": "N hallazgos",
       "nodeTypes": "Tipos de nodo",
       "node": {
         "input": "Punto de entrada",
@@ -344,6 +345,7 @@
   },
   "node": {
     "properties": "Propiedades",
+    "ownFindings": "Hallazgos en este nodo",
     "attackPaths": "Rutas de ataque a través de este nodo",
     "recommendedControls": "Controles recomendados",
     "controlEffect": {

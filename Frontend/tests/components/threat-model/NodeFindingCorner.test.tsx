@@ -10,6 +10,7 @@ beforeEach(() => {
 
 afterEach(() => view.unmount());
 
+const count = () => view.container.querySelector('[data-testid="node-finding-count"]');
 const badge = () => view.container.querySelector('[data-testid="node-finding-badge"]');
 
 describe("NodeFindingCorner", () => {
@@ -19,9 +20,16 @@ describe("NodeFindingCorner", () => {
     expect(badge()?.getAttribute("data-severity")).toBe("high");
   });
 
-  it("adds how many more findings sit on the node", () => {
+  it("adds how many findings sit on the node as a separate, neutral tag", () => {
     view.render(<NodeFindingCorner mark={{ severity: "critical", score: 9.8, count: 3 }} />);
-    expect(badge()?.textContent).toBe("9,8 · +2");
+    expect(badge()?.textContent).toBe("9,8");
+    expect(count()?.textContent).toBe("3 hallazgos");
+    expect(count()?.getAttribute("data-severity")).toBeNull();
+  });
+
+  it("shows no count for a single finding", () => {
+    view.render(<NodeFindingCorner mark={{ severity: "high", score: 7.6, count: 1 }} />);
+    expect(count()).toBeNull();
   });
 
   it("reads the full sentence to screen readers instead of the compact label", () => {

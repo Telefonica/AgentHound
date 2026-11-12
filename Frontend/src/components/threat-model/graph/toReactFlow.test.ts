@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildGraph, findingRoute, nodeFindingMarks, playbackFrame, primaryRoute, primaryRouteId } from "./toReactFlow";
+import { buildGraph, findingRoute, nodeFindingId, nodeFindingMarks, playbackFrame, primaryRoute, primaryRouteId } from "./toReactFlow";
 import type { Attack, Finding, GraphEdge, GraphNode } from "@/types/ThreatModel";
 
 const edges: GraphEdge[] = [
@@ -124,6 +124,27 @@ describe("primaryRoute", () => {
       ["ab", "A2"],
       ["bd", "A2"],
     ]);
+  });
+});
+
+describe("nodeFindingId", () => {
+  it("returns the node a finding without hops sits on", () => {
+    expect(nodeFindingId({ path: ["c"], edges: [] }, edges)).toBe("c");
+    expect(nodeFindingId({ path: ["c", "c"], edges: undefined }, edges)).toBe("c");
+  });
+
+  it("keeps the node when the finding's edges are not in the graph", () => {
+    expect(nodeFindingId({ path: ["c"], edges: ["gone"] }, edges)).toBe("c");
+  });
+
+  it("returns nothing for a route or an empty path", () => {
+    expect(nodeFindingId({ path: ["a", "b"], edges: ["e1"] }, edges)).toBeUndefined();
+    expect(nodeFindingId({ path: ["a", "c"], edges: ["gone"] }, edges)).toBeUndefined();
+    expect(nodeFindingId({ path: [], edges: [] }, edges)).toBeUndefined();
+  });
+
+  it("returns nothing for a single node reached through one of the graph's edges", () => {
+    expect(nodeFindingId({ path: ["c"], edges: ["e3"] }, edges)).toBeUndefined();
   });
 });
 

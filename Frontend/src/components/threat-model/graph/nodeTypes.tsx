@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { useFormatter, useTranslations } from "next-intl";
-import { applyAlpha, ScreenReaderOnly } from "@telefonica/mistica";
+import { applyAlpha, ScreenReaderOnly, Tag } from "@telefonica/mistica";
 import { Handle, Position, type NodeProps, type NodeTypes } from "@xyflow/react";
 import SeverityBadge from "@/components/threat-model/SeverityBadge";
 import type { NodeType } from "@/types/ThreatModel";
@@ -67,10 +67,17 @@ export function NodeFindingCorner({ mark }: { mark: NodeFindingMark }) {
   const description = t("nodeFindings", { count: mark.count, score });
   return (
     <span title={description} style={{ position: "absolute", top: -12, left: 14, zIndex: 3 }}>
-      <span aria-hidden style={{ display: "inline-flex" }}>
+      <span aria-hidden style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
         <SeverityBadge severity={mark.severity} small withIcon dataAttributes={{ testid: "node-finding-badge", severity: mark.severity }}>
-          {mark.count > 1 ? `${score} · +${mark.count - 1}` : score}
+          {score}
         </SeverityBadge>
+        {mark.count > 1 && (
+          <span style={{ display: "inline-flex", borderRadius: 999, background: cyber.surface }}>
+            <Tag type="inactive" small dataAttributes={{ testid: "node-finding-count" }}>
+              {t("findingGroupCount", { count: mark.count })}
+            </Tag>
+          </span>
+        )}
       </span>
       <ScreenReaderOnly>
         <span>{description}</span>
