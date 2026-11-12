@@ -79,16 +79,38 @@ def has_content_validation(cg: CapabilityGraph, path: list[str]) -> bool:
 def is_shared_memory(props: dict) -> bool:
     """True when a memory node is accessible across agents.
 
-    Three independent signals are recognised (any one is sufficient):
+    Four independent signals are recognised (any one is sufficient):
+    - shared is true (the catalogued flag the LangGraph adapter writes)
     - memory_kind == "shared_between_agents"
     - shared_with_agents is a non-empty list
     - scope in {organization, global}
     """
+    if as_bool(props.get("shared", False)):
+        return True
     if props.get("memory_kind") == "shared_between_agents":
         return True
     if props.get("shared_with_agents"):
         return True
     return props.get("scope") in {"organization", "global"}
+
+
+def tool_mediated_hops(cg: CapabilityGraph, agent: str, capability: str) -> list[tuple[str, str]]:
+    """``(tool, target)`` pairs where ``agent`` invokes ``tool`` and the tool
+    performs ``capability`` on ``target``.
+
+    The framework adapters never put an effect verb on the agent -> tool hop:
+    they emit ``agent -invokeTool-> tool -<verb>-> target`` (see
+    ``_common.route_tool_effect``). Rules written for the generic format's direct
+    ``agent -<verb>-> target`` shape use this to also match the adapter shape.
+    """
+    pairs: list[tuple[str, str]] = []
+    for tool in cg.graph.successors(agent):
+        if node_type(cg, tool) != "tool" or "invokeTool" not in cg.hop_capabilities(agent, tool):
+            continue
+        for target in cg.graph.successors(tool):
+            if capability in cg.hop_capabilities(tool, target):
+                pairs.append((tool, target))
+    return pairs
 
 
 def has_interpret_intent(cg: CapabilityGraph, agent: str) -> bool:

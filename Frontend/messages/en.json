@@ -44,7 +44,7 @@
   "overview": {
     "title": "Overview",
     "description": "Test your AI Agent architecture and detect dangerous capability paths before attackers do.",
-    "newThreatModel": "New test",
+    "newThreatModel": "Create new test",
     "kpis": {
       "totalModels": "Total tests",
       "critical": "Critical or high risk tests",
@@ -54,6 +54,7 @@
     "listTitle": "Your tests",
     "emptyTitle": "Create your first test",
     "loadError": "Could not load your tests.",
+    "loadTestError": "Could not load this test.",
     "back": "Back to overview",
     "delete": {
       "action": "Delete {name}",
@@ -77,9 +78,21 @@
     "next": "Next",
     "untitled": "New test",
     "progressLabel": "Test creation progress",
+    "rename": {
+      "editLabel": "Edit test name",
+      "title": "Name your test",
+      "description": "You can edit the test name here.",
+      "fieldLabel": "Test name",
+      "emptyName": "Enter a name. If you leave it empty, the test keeps its current name.",
+      "update": "Update",
+      "cancel": "Cancel",
+      "close": "Close rename dialog",
+      "error": "The new name could not be saved. The test keeps its previous name."
+    },
     "steps": {
       "configuration": "Configuration",
-      "inference": "Inference",
+      "analysis": "Analysis",
+      "capabilities": "Capabilities",
       "results": "Results"
     }
   },
@@ -100,15 +113,18 @@
     "fileWorkflowDesc": "Full workflow definition: nodes, connections, tools and outputs.",
     "chooseFileButton": "Choose file",
     "filesRequired": "Upload at least one YAML file to analyze.",
+    "nameRequired": "Give the analysis a name.",
     "exportHelpLink": "How can I export the yaml file?",
     "analyzeButton": "Analyze"
   },
   "processing": {
+    "heading": "Analyzing",
     "title": "Reading agent architecture…",
     "subtitle": "YAML → IR normalization → capability graph",
     "progressLabel": "Progress",
+    "elapsedTime": "Elapsed time {time}",
     "doneTitle": "Architecture parsed",
-    "doneDesc": "{findings} findings detected · {critical} critical · max score {maxScore} · {agents} agents",
+    "doneDescription": "The capability graph is ready for review.",
     "errorTitle": "Parsing failed"
   },
   "inference": {
@@ -140,6 +156,9 @@
     "editAgentDesc": "Drag capabilities from the catalog onto the agent, or remove the ones that don't apply. You can also rename the agent.",
     "catalogTitle": "Capability catalog",
     "catalogHint": "Drag a capability onto the agent, or click it to add.",
+    "uncheckedVerbs": "No rule looks at these verbs",
+    "uncheckedVerbNote": "No rule looks at the verb \"{capability}\": the link counts for routes like any other, but the verb triggers no rule on its own.",
+    "checkedBy": "Checked by {rules}",
     "detectedCapabilities": "Detected capabilities",
     "addingCapability": "Adding \"{capability}\" to {row}",
     "dropHint": "No capabilities yet. Drag one here from the catalog.",
@@ -156,29 +175,36 @@
         "totalTests": "Tests analyzed",
         "totalFindings": "Total findings",
         "totalCritical": "Critical findings",
-        "criticalRate": "Tests with criticals",
+        "criticalRate": "Critical tests",
         "avgMaxScore": "Avg. max score"
+      },
+      "kpiInfoLabel": "More information about {name}",
+      "kpiInfo": {
+        "criticalRate": "Percentage of tests with critical findings",
+        "avgMaxScore": "Average of the highest risk score found in each analyzed test"
       },
       "back": "Back to results",
       "worstTitle": "Highest-risk tests",
       "maxScoreLabel": "max score {score}",
       "frameworkTitle": "Findings by framework",
-      "frameworkRow": "{tests} tests · {findings} findings"
+      "frameworkRow": "{tests, plural, one {# test} other {# tests}} · {findings, plural, one {# finding} other {# findings}}"
     },
     "title": "Threat Analysis",
-    "subtitleTemplate": "{agents} agents · {tools} tools · {data} data assets · {findings} findings · {critical} critical attack routes detected",
+    "subtitleTemplate": "{agents, plural, one {# agent} other {# agents}} · {tools, plural, one {# tool} other {# tools}} · {data, plural, one {# data asset} other {# data assets}} · {findings, plural, one {# finding} other {# findings}} · {critical, plural, one {# critical attack route} other {# critical attack routes}} detected",
     "tabFindings": "Findings",
     "tabProposedSolution": "Proposed Solution",
     "graphTitleFindings": "Capability Graph — Attack Paths",
     "graphTitleSolution": "Resolved Capability Graph",
     "graphDescFindings": "Critical attack routes highlighted. Click any node to inspect. Controls marked are absent.",
     "graphDescSolution": "Attack paths neutralized after applying controls. Red nodes resolved to green.",
-    "graphHint": "Zoom, pan and drag the nodes · click any node to inspect details",
+    "graphHint": "Zoom, pan and drag the nodes · click any node to inspect details · click a finding to see its route",
     "downloadSvg": "Download SVG",
     "downloadPng": "PNG",
     "playAttack": "Play attack",
+    "playRoute": "Play {id}",
     "stopAttack": "Stop",
     "fitView": "Fit",
+    "minimap": "Graph overview",
     "fullscreen": "Fullscreen",
     "exitFullscreen": "Exit fullscreen",
     "legend": {
@@ -189,10 +215,15 @@
       "pathSeverity": "Path severity",
       "primaryRoute": "{id} primary route",
       "critical": "Other critical finding path",
+      "criticalOnly": "Critical finding path",
       "high": "High finding path",
       "medium": "Medium finding path",
       "low": "Low finding path",
       "info": "Info finding path",
+      "nodeFindings": "Node findings",
+      "nodeFinding": "Top score and number of findings",
+      "nodeFindingSample": "max",
+      "nodeFindingCountSample": "N findings",
       "nodeTypes": "Node types",
       "node": {
         "input": "Entry point",
@@ -203,12 +234,68 @@
         "output": "Output"
       }
     },
-    "solvedBanner": "All critical attack paths resolved · {count} controls activated",
+    "solvedBanner": "All critical attack paths resolved · {count, plural, one {# control} other {# controls}} activated",
     "primaryPath": "Primary critical path",
-    "prioritizedFindings": "Prioritized findings ({count})",
+    "prioritizedFindings": "Prioritized findings",
+    "prioritizedFindingsCount": "{findings, plural, one {# finding} other {# findings}} · {groups, plural, one {# pattern} other {# patterns}}",
+    "findingGroupCount": "{count, plural, one {# finding} other {# findings}}",
+    "findingGroupFrom": "{title} from {node}",
+    "findingGroupAt": "{title} in {node}",
+    "findingGroupHoldsSelection": "Holds the selected finding",
+    "showAllFindingGroups": "Show all {count} patterns",
+    "showMoreOccurrences": "Show {count} more",
+    "showTopFindingGroups": "Show only the top {count}",
+    "showTopOccurrences": "Show only the first {count}",
+    "findingPatternsCount": "{count, plural, one {# cause} other {# causes}}",
+    "showOccurrences": "Show the {count} occurrences",
+    "hideOccurrences": "Hide occurrences",
     "findingSummary": "{title} · score {score}",
+    "highlightedRoute": "Highlighted route",
+    "nodeFindings": "{count, plural, one {# finding} other {# findings}} on this node · max {score}",
+    "playingRoute": "Playing route",
+    "nextRoute": "{id} will be highlighted when this run ends",
+    "clearHighlight": "Show all",
+    "showRouteHint": "Highlights its route in the graph; press again to show the whole graph",
+    "isolateRoute": "Isolate route",
+    "isolatingRoute": "Loading route…",
+    "showInContext": "Show in context",
+    "isolatedRoute": "Isolated finding",
+    "retryIsolate": "Retry route",
+    "loadingIsolatedRoute": "Loading {id}…",
+    "isolateError": "Couldn't load this finding's route.",
     "chokepointTitle": "Recommended choke point",
     "chokepointDesc": "Apply {control} on {node} — eliminates {pct}% of the risk (cost: {cost})",
+    "coverage": {
+      "title": "Format coverage",
+      "subtitle": "{count, plural, one {# rule} other {# rules}} this file's format can't fully check",
+      "intro": "Framework files can't express every rule, so a clean result here is less complete than one from the generic format.",
+      "notExpressibleTitle": "Not reachable from this format",
+      "notExpressibleDesc": "The adapter can't produce what these rules look for, whatever the file declares. Describe the system in the generic format to check them.",
+      "needsDeclarationTitle": "Checked once you declare a property",
+      "needsDeclarationDesc": "Add it to the node's entry in the file and analyze again.",
+      "needsDeclarationDescDify": "Add it to the node's data block in the file and analyze again.",
+      "declare": "Declare {what}",
+      "requirement": "{property}: {values} {node}",
+      "on": {
+        "agent": "on the agent",
+        "input": "on the input",
+        "tool": "on the tool",
+        "data_asset": "on the data asset",
+        "output": "on the output",
+        "memory": "on the memory node",
+        "control": "on the control"
+      },
+      "role": {
+        "delegate": "on the agent another agent delegates to",
+        "reachable": "on a tool that agent can reach",
+        "read": "on the data asset the agent reads",
+        "sent_to": "on the output the agent sends to",
+        "shared": "on memory that more than one agent uses"
+      },
+      "ignoredTitle": "Ignored in your file",
+      "ignoredSuggestion": "{property} on {node} isn't a known property and was ignored. Did you mean {suggestion}?",
+      "ignoredOther": "{property} on {node} belongs to another kind of node and was ignored."
+    },
     "metricsTitleFindings": "Risk Metrics",
     "metricsTitleSolution": "Post-remediation Metrics",
     "before": "Before",
@@ -223,11 +310,19 @@
     },
     "beforeAfter": {
       "findingCount": "Findings",
+      "causeCount": "Causes",
       "criticalCount": "Critical findings",
       "maxScore": "Max score",
-      "riskReduction": "Risk reduction"
+      "riskReduction": "Reduction by finding",
+      "riskReductionByGroup": "Reduction by cause"
     },
     "findingsTableTitle": "Inferred Findings",
+    "searchFindings": "Search findings",
+    "searchFindingsPlaceholder": "FH-001, title, node…",
+    "findingsMatching": "{count} of {total, plural, one {# finding} other {# findings}}",
+    "filterBySeverity": "Filter by severity",
+    "noFindingsMatch": "No findings match your search",
+    "clearFilters": "Clear search and filters",
     "attackFindingsTitle": "Attack Paths",
     "hygieneTitle": "Hygiene & Compliance",
     "tableHeaders": {
@@ -250,6 +345,7 @@
   },
   "node": {
     "properties": "Properties",
+    "ownFindings": "Findings on this node",
     "attackPaths": "Attack paths through this node",
     "recommendedControls": "Recommended controls",
     "controlEffect": {
@@ -260,6 +356,7 @@
     "absent": "absent",
     "deleteNode": "Delete node",
     "riskScore": "Risk score",
-    "evidence": "Evidence"
+    "evidence": "Evidence",
+    "showRoute": "Show route {id} in the graph"
   }
 }

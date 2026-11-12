@@ -159,12 +159,117 @@ implemented on the `new-catalog-rules` branch.
   `shared_between_agents` against `scope`, but that literal is a `memory_kind`
   value, so the rules only fired for `organization`/`global` scopes. A shared
   `is_shared_memory()` helper now treats memory as shared when any of
-  `memory_kind == shared_between_agents`, a non-empty `shared_with_agents`, or
-  `scope in {organization, global}` holds. Catalog 04 patterns were updated to
-  match.
+  `shared: true`, `memory_kind == shared_between_agents`, a non-empty
+  `shared_with_agents`, or `scope in {organization, global}` holds. Catalog 04
+  patterns were updated to match. (`shared` was added later: the LangGraph
+  adapter writes it and it is a catalogued memory property, but the helper did
+  not read it, so LangGraph shared memory never fired FH-009/FH-020.)
+
+## Adapter/rule alignment
+
+- **LangGraph memory -> agent is `readMemory`.** It was labelled `dataFlow`,
+  but FH-009 requires `readMemory` on that hop, so memory poisoning was
+  unreachable from LangGraph even with shared memory recognised.
+
+- **CrewAI and Dify map their native memory.** Neither adapter created memory
+  nodes, so FH-009, FH-020 and FH-029 could never fire from those formats.
+  - CrewAI: a crew-level `memory: true` becomes one `Crew memory` node. Every
+    agent `writeMemory`s into it and `readMemory`s from it, since CrewAI keeps
+    one memory per crew; an agent with `memory: false` stays out. `memory` may
+    instead be a mapping of memory properties (`name`, `sensitivity`,
+    `retention_ttl_days`, `write_validated`...).
+  - Dify: each entry of `workflow.conversation_variables` becomes a memory
+    node, with properties declared on the entry. An `assigner` node writes it:
+    the writer is the node whose output is assigned (`sys.*` values come from
+    the start node; behind an unmapped node such as `code`, the nearest mapped
+    nodes upstream). A constant assignment has no writer. Agents, tools and
+    answer/end nodes whose `data` block references the variable
+    (`{{#conversation.name#}}` or a `[conversation, name]` selector) read it.
+    A variable that no node writes or reads gets no memory node, so an unused
+    declaration doesn't trip FH-029.
+  - Defaults follow `node_properties.yaml`: `sensitivity: medium`, no
+    retention TTL. The memory counts as `shared` once two agents use it,
+    unless the file declares `shared`. A single-agent memory is not a
+    cross-agent channel, so it shouldn't trip FH-009/FH-020.
+
+- **Routes through memory collapse per entry and sink.** A crew memory that
+  every agent writes and reads links every agent to every other one, so
+  FH-002/003/007/011 reported each route through it as its own finding: one
+  root cause, many times (114 to about 2,000 findings on a large crew). After
+  the rules run, findings whose path crosses a memory node keep one per rule,
+  entry and sink (the highest-scoring), and drop when a route without memory
+  already reports that entry and sink. Paths themselves still cross memory, so
+  a route that exists only through memory, shared or not, is still reported.
+  (Skipping memory edges in traversal was tried first, but it lost those
+  routes whenever FH-009 didn't cover them: unshared memory, or a sink FH-009
+  doesn't look for, such as code execution.) FH-009 is exempt, since flow
+  through memory is what it reports.
+
+- **Rules match tool-mediated effects.** The adapters never put an effect verb on
+  the agent -> tool hop; they emit `agent -invokeTool-> tool -<verb>-> target`.
+  FH-008 (fetchWeb on the agent -> tool hop) and FH-025 (agent -> asset `read`)
+  were written for the generic shape only and could not fire from tools in a
+  framework file. Both now also match the adapter shape via
+  `tool_mediated_hops()`, and include the tool's own hop in `edges`. The
+  generic shape still matches as before.
+
+- **Adapters copy every catalogued property.** Each adapter used to copy a fixed
+  list of keys per node type (four for a CrewAI asset, none at all for Dify),
+  silently dropping properties the rules read: `contains_regulated_data`
+  (FH-026), `recipient_type` (FH-013), `authentication_scope` and
+  `exposure_boundary` (FH-017), `idempotent` (FH-031). `apply_declared_properties()`
+  now copies any property catalogued for the node type in
+  `node_properties.yaml`, plus a few descriptive extras. Declared values win
+  over inferred ones. Dify reads them from each node's `data` block, and an
+  `http-request` node's external-send defaults apply only to the keys it
+  doesn't declare. Memory also accepts `memory_kind` and `shared_with_agents`,
+  the two `is_shared_memory()` signals with no catalog default.
+
+- **Ignored declarations are reported.** Unknown keys are still dropped, so a
+  structural key can't clobber a derived property, but a dropped key that looks
+  like a declaration now comes back as an `ignored_property` warning: a near-miss
+  of an accepted property (difflib ratio >= 0.85, so `contains_regulated_dta`
+  suggests `contains_regulated_data`) or a property of another node type. Other
+  unknown keys are the framework's own (`backstory`, `title`...) and stay
+  silent; on the bundled examples none are reported. The
+  warnings depend on the file, so they're stored on the IR (`parse_warnings`).
+
+- **Declared `deployRelease`/`moveResource` are routed.** A tool declared with
+  either verb in `capability_kinds` used to get only an `invokeTool` edge, so
+  FH-012 could not fire from a framework file. The tool now gains an external
+  destination output reached by that verb. No tool name infers these verbs; they
+  have to be declared. Declaring either one also sets `side_effect: true` and
+  `side_effect_reversible: false` unless the file states them, so FH-032 sees a
+  deployment tool as irreversible. The destination is marked
+  `output_kind: deployment_target`, which FH-022 skips: it carries no message
+  content to filter or redact.
+
+- **Graph nodes carry `finding_ids` and `risk_level`.** Node-scoped findings
+  have no edges, so they coloured nothing on the graph. Nodes now carry the same
+  per-finding index as edges.
 
 - **`interpretIntent` direction tolerance.** The backend catalog orients
   `interpretIntent` as agent→input while the frontend groups it as input→agent,
   and no adapter emitted it, so FH-015/FH-033 could silently never fire. Both
   rules now detect the verb on an edge in either direction via
   `has_interpret_intent()`, with fixtures covering the inbound case.
+
+## Engine follow-ups
+
+- **Scoring left as published.** On large architectures many critical findings
+  tie at the 10.0 ceiling. The score, weights and clamp stay exactly as in the
+  paper (§VI) and the ties are accepted. Known
+  side effect: the simulator subtracts mitigation credit from the clamped score,
+  so on a saturated finding it overstates the percentage reduction.
+
+- **Root-cause grouping.** The "root-cause de-duplication" noted above as
+  optional is now implemented as a grouping layer, not de-duplication: no
+  finding, score or severity changes. Each finding gets a `group_id`, and the
+  API returns `groups[]`. The key is declared per rule (`group_by` in
+  `rules.yaml`): `rule` for the seven policy-absence rules that fire once per
+  agent/tool/input, `source` (rule + first path node) for everything else. On
+  three 64-node test architectures this takes 110–238 findings down to 45–88
+  groups. Simulation adds `risk_reduction.by_group`, which counts each group
+  once at its highest score; the per-finding figure the paper reports is
+  unchanged. A partial fix therefore doesn't move `by_group` until a group's
+  worst finding is gone (see `api.md`).

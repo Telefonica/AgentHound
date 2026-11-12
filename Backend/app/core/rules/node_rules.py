@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from ..graph.traversal import CapabilityGraph
 from ..ir.models import Finding
-from .common import agents_on_path, as_bool, has_control_targeting, has_interpret_intent, is_shared_memory, max_sensitivity, node_props, node_type
+from .common import agents_on_path, as_bool, has_control_targeting, has_interpret_intent, is_shared_memory, max_sensitivity, node_props, node_type, tool_mediated_hops
 from .registry import make_finding
 from .scoring import ScoreInputs, compute_score, severity_from_score
 
@@ -135,11 +135,21 @@ def fh_008(cg: CapabilityGraph) -> list[Finding]:
     seen: set[str] = set()
 
     for agent in cg.nodes_of_type("agent"):
-        for v in cg.graph.successors(agent):
-            if node_type(cg, v) != "tool":
-                continue
-            if "fetchWeb" not in cg.hop_capabilities(agent, v):
-                continue
+        # Generic files put fetchWeb on the agent -> tool hop; the framework
+        # adapters put it on the tool's own outgoing hop. Match both.
+        # tool -> (fetched targets, the tool's own fetchWeb edge ids); both empty
+        # for the direct shape. The targets go on the path so every listed
+        # edge has both ends on it.
+        fetch_tools: dict[str, tuple[list[str], list[str]]] = {
+            v: ([], [])
+            for v in cg.graph.successors(agent)
+            if node_type(cg, v) == "tool" and "fetchWeb" in cg.hop_capabilities(agent, v)
+        }
+        for tool, target in tool_mediated_hops(cg, agent, "fetchWeb"):
+            targets, fetch_edges = fetch_tools.setdefault(tool, ([], []))
+            targets.append(target)
+            fetch_edges.extend(cg.hop_edge_ids_for(tool, target, "fetchWeb"))
+        for v, (targets, fetch_edges) in sorted(fetch_tools.items()):
             if as_bool(node_props(cg, v).get("allowlist_present", False)):
                 continue
             if "contentValidation" in node_props(cg, agent).get("guardrails", []):
@@ -164,8 +174,8 @@ def fh_008(cg: CapabilityGraph) -> list[Finding]:
                     finding_id="pending",
                     severity=severity_from_score(score),
                     score=score,
-                    path=[agent, v],
-                    edges=cg.hop_edge_ids(agent, v),
+                    path=[agent, v, *targets],
+                    edges=cg.hop_edge_ids(agent, v) + fetch_edges,
                     evidence={
                         "tool_id": v,
                         "agent_id": agent,
@@ -528,6 +538,11 @@ def fh_020(cg: CapabilityGraph) -> list[Finding]:
                 evidence={
                     "memory_id": mem,
                     "scope": props.get("scope"),
+                    # Whichever is_shared_memory() signal fired; scope alone can
+                    # read "session" for memory shared via one of the others.
+                    "shared": as_bool(props.get("shared", False)),
+                    "memory_kind": props.get("memory_kind"),
+                    "shared_with_agents": list(props.get("shared_with_agents") or []),
                     "write_validated": False,
                 },
             )
@@ -588,6 +603,9 @@ def fh_022(cg: CapabilityGraph) -> list[Finding]:
     for output_node in cg.nodes_of_type("output"):
         props = node_props(cg, output_node)
         if props.get("boundary") != "external":
+            continue
+        # A release/move destination carries no message content to filter.
+        if props.get("output_kind") == "deployment_target":
             continue
         if as_bool(props.get("content_filter_present", False)):
             continue

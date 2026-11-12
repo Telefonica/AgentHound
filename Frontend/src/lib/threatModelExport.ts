@@ -8,6 +8,8 @@
 import { stringify } from "yaml";
 
 import type { AnalysisResult } from "@/lib/api/adapters";
+import type { CoverageWarning } from "@/lib/api/types";
+import { formatValue } from "@/lib/format";
 import type { Finding, GraphEdge, GraphNode } from "@/types/ThreatModel";
 
 /** The graph currently shown (Findings tab vs. Proposed Solution tab). */
@@ -52,6 +54,7 @@ export function buildYamlExport(mode: "findings" | "solution", result: AnalysisR
       title: f.title,
       ...(mode === "solution" ? { status: "resolved" } : {}),
     })),
+    warnings: result.warnings,
   };
   return `# AgentHound Export — ${nowIso()}\n# Mode: ${mode}\n\n${stringify(doc)}`;
 }
@@ -71,6 +74,7 @@ export function downloadFindingsJson(result: AnalysisResult): void {
     exportedAt: nowIso(),
     counts: result.counts,
     findings: result.findings,
+    warnings: result.warnings,
   };
   triggerDownload("agenthound_findings.json", "application/json", JSON.stringify(payload, null, 2));
 }
@@ -117,7 +121,7 @@ function findingSection(f: Finding): string {
   if (f.controls?.length) lines.push(`- **Recommended controls:** ${f.controls.join(", ")}`);
   if (f.evidence && Object.keys(f.evidence).length > 0) {
     const ev = Object.entries(f.evidence)
-      .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join("/") : v}`)
+      .map(([k, v]) => `${k}: ${formatValue(v)}`)
       .join(" · ");
     lines.push(`- **Evidence:** ${ev}`);
   }
@@ -125,9 +129,31 @@ function findingSection(f: Finding): string {
   return lines.join("\n");
 }
 
+function warningLine(w: CoverageWarning): string {
+  return w.rules.length > 0 ? `- **${w.rules.join(", ")}:** ${w.message}` : `- ${w.message}`;
+}
+
+function coverageSections(warnings: CoverageWarning[]): string[] {
+  const rules = warnings.filter((w) => w.kind !== "ignored_property");
+  const ignored = warnings.filter((w) => w.kind === "ignored_property");
+  const out: string[] = [];
+  if (rules.length > 0) {
+    out.push(
+      "## Rule coverage",
+      "",
+      "This file's format limits which rules can fire, so the findings below don't cover these rules.",
+      "",
+      ...rules.map(warningLine),
+      "",
+    );
+  }
+  if (ignored.length > 0) out.push("## Ignored properties", "", ...ignored.map(warningLine), "");
+  return out;
+}
+
 /** Build a human-readable Markdown report. On the Proposed Solution tab it also
  * includes the before/after metrics and the remediation timeline. */
-export function downloadMarkdownReport(result: AnalysisResult, view: GraphView): void {
+export function buildMarkdownReport(result: AnalysisResult, view: GraphView): string {
   const { counts, findings } = result;
   const sol = result.solution;
   const out: string[] = [
@@ -143,6 +169,7 @@ export function downloadMarkdownReport(result: AnalysisResult, view: GraphView):
     `- **Findings:** ${counts.findings} (${counts.critical} critical, ${counts.high} high, ${counts.medium} medium, ${counts.low} low)`,
     `- **Max score:** ${counts.maxScore}`,
     "",
+    ...coverageSections(result.warnings),
   ];
 
   if (view === "solution" && sol) {
@@ -172,5 +199,9 @@ export function downloadMarkdownReport(result: AnalysisResult, view: GraphView):
   out.push(`## Findings (${findings.length})`, "");
   for (const f of findings) out.push(findingSection(f));
 
-  triggerDownload(`agenthound_report_${view}.md`, "text/markdown", out.join("\n"));
+  return out.join("\n");
+}
+
+export function downloadMarkdownReport(result: AnalysisResult, view: GraphView): void {
+  triggerDownload(`agenthound_report_${view}.md`, "text/markdown", buildMarkdownReport(result, view));
 }

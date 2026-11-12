@@ -38,7 +38,6 @@ from ...ir.models import (
 from ._common import (
     IRBuilder,
     IdFactory,
-    apply_tool_overrides,
     as_list,
     infer_asset_properties,
     infer_input_properties,
@@ -72,6 +71,10 @@ def _infer_node_type(name: str, payload: Mapping[str, Any]) -> NodeType:
 def _capability_for(source_kind: NodeType, target_kind: NodeType) -> str:
     if source_kind == NodeType.INPUT and target_kind == NodeType.AGENT:
         return "receiveInstruction"
+    # FH-009 keys on readMemory for the memory -> agent hop; dataFlow there
+    # would hide every memory-poisoning path.
+    if source_kind == NodeType.MEMORY and target_kind == NodeType.AGENT:
+        return "readMemory"
     if target_kind == NodeType.TOOL:
         return "invokeTool"
     if target_kind == NodeType.DATA_ASSET:
@@ -86,25 +89,21 @@ def _capability_for(source_kind: NodeType, target_kind: NodeType) -> str:
 def _build_node(builder: IRBuilder, ids: IdFactory, name: str, payload: Mapping[str, Any], node_type: NodeType) -> str:
     if node_type == NodeType.AGENT:
         nid = ids.make(NodeType.AGENT, name)
-        builder.add_node(
-            nid,
-            NodeType.AGENT,
-            name,
-            {
-                "role_type": "worker",
-                "trust_level": str(payload.get("trust_level") or "internal_logic"),
-                "autonomy_level": str(payload.get("autonomy_level") or "full_auto"),
-                "guardrails": [str(g) for g in as_list(payload.get("guardrails"))],
-                "has_scoped_delegation": as_bool(payload.get("has_scoped_delegation", False)),
-            },
-        )
+        agent_props: dict[str, Any] = {
+            "role_type": "worker",
+            "trust_level": "internal_logic",
+            "autonomy_level": "full_auto",
+            "guardrails": [],
+            "has_scoped_delegation": False,
+        }
+        builder.declare(agent_props, payload, NodeType.AGENT, name)
+        builder.add_node(nid, NodeType.AGENT, name, agent_props)
         for raw_tool in as_list(payload.get("tools")):
             tname = raw_tool.get("name") if isinstance(raw_tool, Mapping) else str(raw_tool)
             if not tname:
                 continue
             props = infer_tool_properties(str(tname))
-            if isinstance(raw_tool, Mapping):
-                apply_tool_overrides(props, raw_tool)
+            builder.declare(props, raw_tool, NodeType.TOOL, str(tname))
             tool_id = ids.make(NodeType.TOOL, str(tname))
             builder.add_node(tool_id, NodeType.TOOL, str(tname), props)
             route_tool_effect(builder, ids, nid, tool_id, props)
@@ -113,17 +112,14 @@ def _build_node(builder: IRBuilder, ids: IdFactory, name: str, payload: Mapping[
     if node_type == NodeType.INPUT:
         nid = ids.make(NodeType.INPUT, name)
         props = infer_input_properties(name)
-        if "trust_level" in payload:
-            props["trust_level"] = payload["trust_level"]
+        builder.declare(props, payload, NodeType.INPUT, name)
         builder.add_node(nid, NodeType.INPUT, name, props)
         return nid
 
     if node_type == NodeType.DATA_ASSET:
         nid = ids.make(NodeType.DATA_ASSET, name)
         props = infer_asset_properties(name)
-        for key in ("sensitivity", "boundary", "contains_pii", "asset_kind"):
-            if key in payload:
-                props[key] = payload[key]
+        builder.declare(props, payload, NodeType.DATA_ASSET, name)
         builder.add_node(nid, NodeType.DATA_ASSET, name, props)
         return nid
 
@@ -135,27 +131,21 @@ def _build_node(builder: IRBuilder, ids: IdFactory, name: str, payload: Mapping[
         boundary = payload.get("boundary") if "boundary" in payload else None
         external = None if boundary is None else str(boundary).strip().lower() == "external"
         props = infer_output_properties(name, external=external)
-        for key in ("boundary", "approval_gate_present", "side_effect", "output_kind"):
-            if key in payload:
-                props[key] = payload[key]
+        builder.declare(props, payload, NodeType.OUTPUT, name)
         builder.add_node(nid, NodeType.OUTPUT, name, props)
         return nid
 
     if node_type == NodeType.MEMORY:
         nid = ids.make(NodeType.MEMORY, name)
-        builder.add_node(
-            nid,
-            NodeType.MEMORY,
-            name,
-            {
-                "sensitivity": str(payload.get("sensitivity") or "medium"),
-                "shared": as_bool(payload.get("shared", False)),
-            },
-        )
+        props = {"sensitivity": "medium", "shared": False}
+        builder.declare(props, payload, NodeType.MEMORY, name)
+        builder.add_node(nid, NodeType.MEMORY, name, props)
         return nid
 
     nid = ids.make(NodeType.CONTROL, name)
-    builder.add_node(nid, NodeType.CONTROL, name, {"status": "present", "effect": "total"})
+    props = {"status": "present", "effect": "total"}
+    builder.declare(props, payload, NodeType.CONTROL, name)
+    builder.add_node(nid, NodeType.CONTROL, name, props)
     return nid
 
 
@@ -249,4 +239,5 @@ def load(data: dict[str, Any], analysis_id: str) -> AnalysisIR:
         metadata=Metadata(name=str(data.get("name") or "LangGraph app")),
         nodes=builder.nodes,
         edges=builder.edges,
+        parse_warnings=builder.warnings,
     )

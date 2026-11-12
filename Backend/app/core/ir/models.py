@@ -69,6 +69,11 @@ class Edge(BaseModel):
     )
 
 
+# Longest analysis name the API accepts, on create and on rename. The name is
+# stored with the analysis and returned in every listing row.
+MAX_NAME_LENGTH = 200
+
+
 class Metadata(BaseModel):
     name: str = Field(default="Unnamed architecture")
     uploaded_at: datetime = Field(
@@ -87,6 +92,10 @@ class AnalysisIR(BaseModel):
     edges: list[Edge] = Field(default_factory=list)
     controls: list[dict[str, Any]] = Field(
         default_factory=list, description="Declared controls (Phase 2 uses these as first-class nodes)."
+    )
+    parse_warnings: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="Problems the adapter found in the source file (e.g. ignored property keys).",
     )
 
     # --- convenience accessors used across the pipeline ---
@@ -120,6 +129,10 @@ class Finding(BaseModel):
     owasp_agentic: list[str] = Field(default_factory=list)
     owasp_llm: list[str] = Field(default_factory=list)
     mitre_atlas: list[str] = Field(default_factory=list)
+    group_id: str = Field(
+        default="",
+        description="Root-cause group this finding belongs to (see rules/grouping.py).",
+    )
 
     @computed_field
     @property
@@ -215,6 +228,16 @@ class AnalyzeRequest(BaseModel):
 
     nodes: list[AnalyzeNode] = Field(default_factory=list)
     edges: list[AnalyzeEdge] = Field(default_factory=list)
+
+
+class RenameRequest(BaseModel):
+    """Body of PATCH /analyses/{id}: the analysis' new name."""
+
+    name: str = Field(
+        ...,
+        max_length=MAX_NAME_LENGTH,
+        description="New analysis name; surrounding whitespace is trimmed.",
+    )
 
 
 # --- error envelope (spec section 13) ---

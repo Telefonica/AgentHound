@@ -23,6 +23,7 @@ function item(
       max_score: 0,
       ...summary,
     } as AnalysisListItem["summary"],
+    warnings: [],
   };
 }
 

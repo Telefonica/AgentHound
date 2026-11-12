@@ -110,6 +110,12 @@ class CapabilityGraph:
             return []
         return [k for k in self.graph.get_edge_data(u, v).keys()]
 
+    def hop_edge_ids_for(self, u: str, v: str, capability: str) -> list[str]:
+        """Edge ids on the u -> v hop that carry exactly ``capability``."""
+        if not self.graph.has_edge(u, v):
+            return []
+        return [k for k, d in self.graph.get_edge_data(u, v).items() if d.get("capability") == capability]
+
     def capabilities_on_path(self, path: list[str]) -> set[str]:
         # A path is a node sequence (nx.all_simple_paths enumerates node-paths,
         # not edge-paths), so between two consecutive nodes we consider every

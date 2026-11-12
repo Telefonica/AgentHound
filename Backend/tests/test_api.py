@@ -87,6 +87,31 @@ def test_graph_endpoint_frontend_shape():
     node = next(n for n in graph["nodes"] if n["id"] == "input_web_form")
     assert "untrusted" in node["badges"]
     assert all({"risk_level", "blocked", "finding_ids"} <= e.keys() for e in graph["edges"])
+    assert all({"risk_level", "finding_ids"} <= n.keys() for n in graph["nodes"])
+
+
+def test_graph_nodes_carry_node_scoped_findings():
+    # Node-scoped findings have no edges, so they can only be shown on the node
+    # itself. Every finding must be listed on each node of its path.
+    analysis_id = _create_analyzed("hiresmart_generic.yaml")
+    findings = client.get(f"/analyses/{analysis_id}/findings").json()["findings"]
+    graph = client.get(f"/analyses/{analysis_id}/graph").json()
+    nodes = {n["id"]: n for n in graph["nodes"]}
+
+    edgeless = [f for f in findings if not f["edges"]]
+    assert edgeless, "fixture should produce at least one node-scoped finding"
+    for finding in findings:
+        for node_id in finding["path"]:
+            assert finding["id"] in nodes[node_id]["finding_ids"]
+    # A node's risk_level is the highest severity among its findings.
+    rank = ["info", "low", "medium", "high", "critical"]
+    for node in nodes.values():
+        expected = max(
+            (f["severity"] for f in findings if f["id"] in node["finding_ids"]),
+            key=rank.index,
+            default="info",
+        )
+        assert node["risk_level"] == expected
 
 
 def test_findings_endpoint_sorted_and_detail():
@@ -139,6 +164,149 @@ def test_get_unknown_analysis_returns_error_envelope():
     resp = client.get("/analyses/does-not-exist")
     assert resp.status_code == 404
     assert resp.json()["error"]["code"] == "ANALYSIS_NOT_FOUND"
+
+
+def test_rename_updates_the_detail_and_the_listing():
+    analysis_id = _create_analyzed("hiresmart_generic.yaml")
+
+    resp = client.patch(f"/analyses/{analysis_id}", json={"name": "  Renamed test  "})
+    assert resp.status_code == 200, resp.text
+    # Same shape as GET /analyses/{id}, with the trimmed name.
+    assert resp.json()["name"] == "Renamed test"
+    assert resp.json() == client.get(f"/analyses/{analysis_id}").json()
+
+    row = next(a for a in client.get("/analyses").json()["analyses"] if a["analysis_id"] == analysis_id)
+    assert row["name"] == "Renamed test"
+
+
+def test_rename_persists_to_disk_and_survives_a_reanalysis():
+    from app.core.storage.repository import AnalysisRepository, repository
+
+    analysis_id = _create("hiresmart_generic.yaml")
+    assert client.patch(f"/analyses/{analysis_id}", json={"name": "Renamed"}).status_code == 200
+
+    # A fresh repository has an empty cache, so this reads the file on disk.
+    assert AnalysisRepository(repository.data_dir).get(analysis_id).ir.metadata.name == "Renamed"
+    # Running the rules again keeps the stored name.
+    assert _analyze(analysis_id)["name"] == "Renamed"
+
+
+def test_rename_rejects_a_blank_name():
+    analysis_id = _create("hiresmart_generic.yaml")
+    original = client.get(f"/analyses/{analysis_id}").json()["name"]
+
+    resp = client.patch(f"/analyses/{analysis_id}", json={"name": "   "})
+    assert resp.status_code == 400
+    assert resp.json()["error"]["code"] == "INVALID_NAME"
+    assert client.get(f"/analyses/{analysis_id}").json()["name"] == original
+
+
+def test_rename_unknown_analysis_returns_error_envelope():
+    resp = client.patch("/analyses/does-not-exist", json={"name": "Renamed"})
+    assert resp.status_code == 404
+    assert resp.json()["error"]["code"] == "ANALYSIS_NOT_FOUND"
+
+
+def test_rename_storage_failure_keeps_the_old_name(monkeypatch):
+    from app.core.storage.repository import repository
+
+    analysis_id = _create("hiresmart_generic.yaml")
+    original = client.get(f"/analyses/{analysis_id}").json()["name"]
+    with monkeypatch.context() as m:
+        m.setattr(
+            type(repository.data_dir),
+            "write_text",
+            lambda *a, **k: (_ for _ in ()).throw(OSError("disk full")),
+        )
+        resp = client.patch(f"/analyses/{analysis_id}", json={"name": "Renamed"})
+    assert resp.status_code == 500
+    assert resp.json()["error"]["code"] == "STORAGE_ERROR"
+    assert client.get(f"/analyses/{analysis_id}").json()["name"] == original
+
+
+def test_rename_survives_an_analysis_with_an_edited_graph():
+    analysis_id = _create("hiresmart_generic.yaml")
+    assert client.patch(f"/analyses/{analysis_id}", json={"name": "Renamed"}).status_code == 200
+
+    graph = client.get(f"/analyses/{analysis_id}/graph").json()
+    assert _analyze(analysis_id, _analyze_payload(graph))["name"] == "Renamed"
+    assert client.get(f"/analyses/{analysis_id}").json()["name"] == "Renamed"
+
+
+def test_rename_during_an_analysis_is_not_lost(monkeypatch):
+    """A rename that arrives while /analyze runs must not be overwritten when
+    the analysis saves itself back. The analysis is held mid-run so the rename
+    is sent at exactly that point."""
+    import threading
+
+    from app.api.routes import analyze as analyze_route
+
+    analysis_id = _create("hiresmart_generic.yaml")
+    started, release = threading.Event(), threading.Event()
+    real_analyze_stored = analyze_route.analyze_stored
+
+    def held_analyze_stored(stored):
+        started.set()
+        assert release.wait(timeout=10)
+        return real_analyze_stored(stored)
+
+    monkeypatch.setattr(analyze_route, "analyze_stored", held_analyze_stored)
+
+    responses: dict[str, object] = {}
+    analyze_thread = threading.Thread(
+        target=lambda: responses.update(analyze=client.post(f"/analyses/{analysis_id}/analyze"))
+    )
+    rename_thread = threading.Thread(
+        target=lambda: responses.update(
+            rename=client.patch(f"/analyses/{analysis_id}", json={"name": "Renamed mid-analysis"})
+        )
+    )
+    analyze_thread.start()
+    assert started.wait(timeout=10)
+    rename_thread.start()
+    # The rename waits for the analysis instead of saving underneath it.
+    rename_thread.join(timeout=0.5)
+    assert rename_thread.is_alive()
+
+    release.set()
+    analyze_thread.join(timeout=10)
+    rename_thread.join(timeout=10)
+    assert responses["analyze"].status_code == 200
+    assert responses["rename"].status_code == 200
+    assert client.get(f"/analyses/{analysis_id}").json()["name"] == "Renamed mid-analysis"
+
+
+def test_rename_rejects_a_name_over_the_limit_with_the_error_envelope():
+    from app.core.ir.models import MAX_NAME_LENGTH
+
+    analysis_id = _create("hiresmart_generic.yaml")
+    assert client.patch(f"/analyses/{analysis_id}", json={"name": "x" * MAX_NAME_LENGTH}).status_code == 200
+
+    resp = client.patch(f"/analyses/{analysis_id}", json={"name": "x" * (MAX_NAME_LENGTH + 1)})
+    assert resp.status_code == 422
+    assert resp.json()["error"]["code"] == "INVALID_REQUEST"
+
+
+def test_create_rejects_a_name_over_the_limit_with_the_error_envelope():
+    from app.core.ir.models import MAX_NAME_LENGTH
+
+    resp = client.post(
+        "/analyses",
+        files={"file": ("hiresmart_generic.yaml", fixture_text("hiresmart_generic.yaml"), "application/x-yaml")},
+        data={"name": "x" * (MAX_NAME_LENGTH + 1)},
+    )
+    assert resp.status_code == 422
+    assert resp.json()["error"]["code"] == "INVALID_REQUEST"
+
+
+def test_malformed_bodies_use_the_error_envelope():
+    analysis_id = _create("hiresmart_generic.yaml")
+    for body in ({}, {"name": 123}):
+        resp = client.patch(f"/analyses/{analysis_id}", json=body)
+        assert resp.status_code == 422, body
+        error = resp.json()["error"]
+        assert error["code"] == "INVALID_REQUEST"
+        assert error["details"]["errors"][0]["loc"] == ["body", "name"]
 
 
 def test_delete_removes_analysis_and_drops_it_from_the_listing():
@@ -338,3 +506,24 @@ def test_oversized_upload_rejected(monkeypatch):
     )
     assert resp.status_code == 413
     assert resp.json()["error"]["code"] == "UPLOAD_TOO_LARGE"
+
+
+def test_capabilities_lists_each_verb_with_evaluated_by():
+    from app.core.catalogs import capability_catalog
+
+    resp = client.get("/capabilities")
+    assert resp.status_code == 200, resp.text
+    entries = resp.json()["capabilities"]
+    catalog = capability_catalog()
+    # Every verb, once, in catalog order, with the catalog's rule list.
+    assert [e["verb"] for e in entries] == list(catalog)
+    for entry in entries:
+        assert entry["evaluated_by"] == catalog[entry["verb"]]["evaluated_by"]
+        assert {"description", "typical_source", "typical_target"} <= entry.keys()
+    by_verb = {e["verb"]: e for e in entries}
+    assert by_verb["executeCode"]["evaluated_by"] == ["FH-010", "FH-016"]
+    # Vocabulary-only verbs are listed with an empty list rather than omitted.
+    assert by_verb["receiveEvent"]["evaluated_by"] == []
+    # The response is typed in OpenAPI, not a bare object.
+    schema = client.get("/openapi.json").json()["paths"]["/capabilities"]["get"]["responses"]["200"]
+    assert schema["content"]["application/json"]["schema"]["$ref"].endswith("/CapabilitiesResponse")

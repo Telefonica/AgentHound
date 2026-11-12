@@ -7,6 +7,44 @@
  * `@/lib/api/adapters`.
  */
 
+/** A rule the uploaded file's framework can't reach, or only reaches once the
+ * file declares a property (`catalogs/adapter_coverage.yaml`).
+ * `not_expressible`: the adapter can't produce the shape the rule needs.
+ * `needs_declaration`: `declare` says what to declare; `properties` lists the
+ * property names in it.
+ * `ignored_property`: a key in the file that looks like a declaration (a typo,
+ * or a property of another node type) was dropped; `rules` is empty.
+ * Always empty for the generic format. `message` is English; build translated
+ * text from the structured fields instead. */
+export interface CoverageWarning {
+  kind: "not_expressible" | "needs_declaration" | "ignored_property";
+  rules: string[];
+  properties: string[];
+  message: string;
+  /** `needs_declaration` only: alternative options, any one of which unlocks
+   * the rules; each is a list of requirements that must all hold. */
+  declare?: DeclarationRequirement[][];
+  /** `ignored_property` only: the node the key was on. */
+  node?: string;
+  node_type?: string;
+  /** `ignored_property` only: the property the key resembles, if any. */
+  suggestion?: string | null;
+}
+
+/** One property to declare for a `needs_declaration` warning: on a node of
+ * `node_type`, set `property` to any one of `values` (for a list property,
+ * include one of them). */
+export interface DeclarationRequirement {
+  node_type: string;
+  /** Which node of that type, when not any: `delegate` (the agent another
+   * agent delegates to), `reachable` (a tool the option's agent can reach),
+   * `read` (the data asset the agent reads), `sent_to` (the output the agent
+   * sends to) or `shared` (memory more than one agent uses). */
+  role?: string;
+  property: string;
+  values: (string | boolean)[];
+}
+
 /** Summary block returned by `POST /analyses` (spec section 12.1). */
 export interface BackendSummary {
   nodes: number;
@@ -28,6 +66,7 @@ export interface AnalysisListItem {
   source_framework: string;
   uploaded_at: string;
   summary: BackendSummary;
+  warnings: CoverageWarning[];
 }
 
 /** Response of `GET /analyses`: every stored analysis, most recent upload first. */
@@ -50,7 +89,10 @@ export interface CreateAnalysisResponse {
   status: string;
   /** Authoritative analysis name (the submitted name, or the YAML's metadata.name). */
   name: string;
+  /** Detected input format: `generic`, `crewai`, `dify` or `langgraph`. */
+  source_framework: string;
   summary: BackendSummary;
+  warnings: CoverageWarning[];
 }
 
 /** A node in the normalized graph (spec section 12.2). `type` is a backend
@@ -60,6 +102,12 @@ export interface BackendGraphNode {
   label: string;
   type: string;
   risk_score: number;
+  /** Highest severity among the findings whose path contains this node
+   * (`info` when none). Node-scoped findings have no edges, so this is where
+   * they become visible. */
+  risk_level: string;
+  /** Ids of every finding whose path contains this node. */
+  finding_ids: string[];
   properties: Record<string, unknown>;
   badges: string[];
 }
@@ -107,10 +155,36 @@ export interface BackendFinding {
   mitre_atlas: string[];
   /** Derived channel: "attack" for exploitable paths, "hygiene" for compliance gaps. */
   finding_class: "attack" | "hygiene";
+  /** Root-cause group this finding belongs to (see {@link FindingGroup}). */
+  group_id: string;
+}
+
+/** Repeated occurrences of one root cause. `group_by: "rule"` collapses
+ * every finding of a rule (policy-absence rules, one per agent/tool/input);
+ * `"source"` groups by rule and the first node of the path, which is
+ * `anchor_node_id`. Ordered by `max_score` descending. */
+export interface FindingGroup {
+  group_id: string;
+  rule_id: string;
+  title: string;
+  group_by: "rule" | "source";
+  anchor_node_id: string | null;
+  finding_class: "attack" | "hygiene";
+  count: number;
+  max_score: number;
+  severity: string;
+  representative_finding_id: string;
+  finding_ids: string[];
 }
 
 export interface FindingsResponse {
   findings: BackendFinding[];
+  groups: FindingGroup[];
+}
+
+export interface FindingDetailResponse {
+  finding: BackendFinding;
+  path_graph: BackendGraph;
 }
 
 // --- Phase 2: control recommendation + simulation (spec sections 12.5-12.6) --
@@ -167,6 +241,11 @@ export interface SimSummary {
 export interface RiskReduction {
   absolute: number;
   percentage: number;
+  /** Same reduction with each root-cause group counted once at its max score. */
+  by_group: {
+    absolute: number;
+    percentage: number;
+  };
 }
 
 /** A before-finding whose (rule_id, path) no longer appears after the
@@ -226,9 +305,29 @@ export interface AnalyzeResponse {
   analysis_id: string;
   status: string;
   name: string;
+  source_framework: string;
   summary: BackendSummary;
   graph: BackendGraph;
   findings: BackendFinding[];
+  groups: FindingGroup[];
+  warnings: CoverageWarning[];
+}
+
+/** One capability verb from `catalogs/capabilities.yaml`. `evaluated_by` lists
+ * the rule ids whose logic checks for the verb; an empty list means the verb is
+ * vocabulary only (accepted on edges and drawn, but no rule fires on it). */
+export interface CapabilityDescriptor {
+  verb: string;
+  description: string;
+  typical_source: string | null;
+  typical_target: string | null;
+  evaluated_by: string[];
+}
+
+/** Response of `GET /capabilities`: every verb, in catalog order. Static; it
+ * does not depend on any analysis. */
+export interface CapabilitiesResponse {
+  capabilities: CapabilityDescriptor[];
 }
 
 /** The error envelope every non-2xx response is expected to carry (spec

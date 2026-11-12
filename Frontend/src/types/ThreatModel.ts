@@ -62,6 +62,9 @@ export interface GraphEdge {
 export interface Attack {
   id: string;
   severity: Extract<Severity, "critical" | "high">;
+  score: number;
+  /** Summed score of every finding whose path lies entirely within this path. */
+  exposure: number;
   width: number;
   nodes: string[];
   label: string;
@@ -94,6 +97,9 @@ export interface Finding {
   controls?: string[];
   /** Derived channel: "attack" for exploitable paths, "hygiene" for compliance/monitoring gaps. */
   findingClass: "attack" | "hygiene";
+  /** Root-cause group from the backend: repeated occurrences of one cause share it. */
+  groupId: string;
+  groupAnchor?: string;
 }
 
 export interface NodeProp {

@@ -1,0 +1,122 @@
+{
+  "analysis_id": "data-codeexec",
+  "name": "Data Analysis Assistant (risky)",
+  "source_framework": "langgraph",
+  "uploaded_at": "2026-11-03T09:00:00+00:00",
+  "summary": {
+    "nodes": 6,
+    "edges": 6,
+    "findings": 13,
+    "critical": 1,
+    "high": 6,
+    "medium": 4,
+    "max_score": 9.8
+  },
+  "warnings": [
+    {
+      "kind": "not_expressible",
+      "rules": [
+        "FH-006"
+      ],
+      "message": "Fetched web content ends at the tool that fetched it; no adapter passes it on to another agent, so the propagation path FH-006 needs can't occur.",
+      "properties": []
+    },
+    {
+      "kind": "not_expressible",
+      "rules": [
+        "FH-015"
+      ],
+      "message": "No adapter emits the interpretIntent verb.",
+      "properties": []
+    },
+    {
+      "kind": "not_expressible",
+      "rules": [
+        "FH-031"
+      ],
+      "message": "No adapter emits the retry verb.",
+      "properties": []
+    },
+    {
+      "kind": "not_expressible",
+      "rules": [
+        "FH-030"
+      ],
+      "message": "Each tool's effect ends at its own output or data asset, so no path passes through two side-effect tools.",
+      "properties": []
+    },
+    {
+      "kind": "needs_declaration",
+      "rules": [
+        "FH-012"
+      ],
+      "message": "Declare `capability_kinds: [deployRelease]` (or `moveResource`) on the tool; no tool name maps to these verbs.",
+      "properties": [
+        "capability_kinds"
+      ]
+    },
+    {
+      "kind": "needs_declaration",
+      "rules": [
+        "FH-013"
+      ],
+      "message": "Declare `recipient_type: public_channel` (or `broadcast`) on the output the agent sends to.",
+      "properties": [
+        "recipient_type"
+      ]
+    },
+    {
+      "kind": "needs_declaration",
+      "rules": [
+        "FH-014"
+      ],
+      "message": "Declare `trust_level: trusted_core` on the agent named in `delegates_to`.",
+      "properties": [
+        "trust_level"
+      ]
+    },
+    {
+      "kind": "needs_declaration",
+      "rules": [
+        "FH-017"
+      ],
+      "message": "Declare `exposure_boundary: external` on the agent and `authentication_scope: elevated` on a tool it can reach.",
+      "properties": [
+        "exposure_boundary",
+        "authentication_scope"
+      ]
+    },
+    {
+      "kind": "needs_declaration",
+      "rules": [
+        "FH-025"
+      ],
+      "message": "Declare `boundary: external` (or `trust_level: untrusted`) on the data asset being read.",
+      "properties": [
+        "boundary",
+        "trust_level"
+      ]
+    },
+    {
+      "kind": "needs_declaration",
+      "rules": [
+        "FH-026"
+      ],
+      "message": "Declare `contains_regulated_data: [gdpr]` on the data asset.",
+      "properties": [
+        "contains_regulated_data"
+      ]
+    },
+    {
+      "kind": "needs_declaration",
+      "rules": [
+        "FH-009",
+        "FH-020"
+      ],
+      "message": "Memory nodes are private by default; declare `shared: true` on memory that more than one agent uses.",
+      "properties": [
+        "shared"
+      ]
+    }
+  ]
+}

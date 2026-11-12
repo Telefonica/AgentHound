@@ -99,7 +99,7 @@ function AnalysisResultScreen({
               </Align>
             </Box>
           ) : error ? (
-            <InlineError message={t("loadError")} onRetry={retry} />
+            <InlineError message={t("loadTestError")} onRetry={retry} />
           ) : (
             <ResultsStep result={result} />
           )}

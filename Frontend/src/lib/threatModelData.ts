@@ -1,5 +1,4 @@
 import type {
-  Attack,
   Finding,
   GraphEdge,
   GraphNode,
@@ -61,6 +60,7 @@ export const MOCK_FINDINGS: Finding[] = [
     mitre: ["AML.T0054", "AML.T0048"],
     controls: ["humanInTheLoop", "outputFiltering", "piiRedaction", "leastPrivilege"],
     findingClass: "attack",
+    groupId: "FH-001",
   },
   {
     id: "FH-006",
@@ -85,6 +85,7 @@ export const MOCK_FINDINGS: Finding[] = [
     mitre: ["AML.T0051"],
     controls: ["contentValidation", "urlAllowlist", "humanInTheLoop"],
     findingClass: "attack",
+    groupId: "FH-006",
   },
   {
     id: "FH-011",
@@ -108,6 +109,7 @@ export const MOCK_FINDINGS: Finding[] = [
     mitre: ["AML.T0040"],
     controls: ["humanInTheLoop", "dryRunFirst", "rollbackReady"],
     findingClass: "attack",
+    groupId: "FH-011",
   },
   {
     id: "FH-013",
@@ -131,6 +133,7 @@ export const MOCK_FINDINGS: Finding[] = [
     mitre: ["AML.T0054"],
     controls: ["piiRedaction", "outputFiltering"],
     findingClass: "attack",
+    groupId: "FH-013",
   },
   {
     id: "FH-007",
@@ -152,6 +155,7 @@ export const MOCK_FINDINGS: Finding[] = [
     mitre: ["AML.T0054"],
     controls: ["delegationScoping", "interAgentAuthentication"],
     findingClass: "attack",
+    groupId: "FH-007",
   },
 ];
 
@@ -208,14 +212,6 @@ export const G_EDGES: GraphEdge[] = [
   { id: "edge_015", f: "n12", t: "n2", lbl: "dataFlow", capability: "dataFlow", type: "return", cx: 680, cy: 50, riskLevel: "critical", blocked: false, findingIds: ["FH-001"] },
   { id: "edge_016", f: "n2", t: "n5", lbl: "", capability: "delegateTo", riskLevel: "critical", blocked: false, findingIds: ["FH-001", "FH-013"] },
   { id: "edge_017", f: "n10", t: "n15", lbl: "", capability: "send", riskLevel: "critical", blocked: false, findingIds: ["FH-001"] },
-];
-
-export const ATTACKS: Attack[] = [
-  { id: "FH-001", severity: "critical", width: 2.5, nodes: ["n0", "n1", "n2", "n7", "n12"], label: "FH-001", dash: false },
-  { id: "FH-001b", severity: "critical", width: 2.5, nodes: ["n12", "n2", "n5", "n10", "n15"], label: "", dash: false },
-  { id: "FH-006", severity: "critical", width: 2.5, nodes: ["n8", "n13"], label: "FH-006", dash: false },
-  { id: "FH-006b", severity: "critical", width: 2, nodes: ["n13", "n2"], label: "", dash: true, cx: 700, cy: 500 },
-  { id: "FH-011", severity: "high", width: 2.5, nodes: ["n1", "n4", "n9", "n14"], label: "FH-011", dash: false },
 ];
 
 export const NODE_PROPS: Record<string, NodeDetail> = {

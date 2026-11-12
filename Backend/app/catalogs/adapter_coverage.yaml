@@ -1,0 +1,154 @@
+# Rule coverage per framework adapter.
+#
+# The generic format can express every rule. The framework adapters cannot:
+# some rules need a verb or a node kind the adapter never produces, and others
+# only fire when the file declares an AgentHound property that the framework
+# doesn't have natively and the adapter never infers. Each analysis of a
+# framework file returns these entries as `warnings[]`.
+#
+# kind:
+#   not_expressible    the adapter can't produce the shape the rule needs,
+#                      whatever the file says.
+#   needs_declaration  the rule fires once the file declares the properties
+#                      in `declare` (on the node's entry; for Dify, in the
+#                      node's `data` block).
+#
+# `declare` lists alternative options, any one of which unlocks the rule; each
+# option is a list of requirements that must all hold. A requirement names the
+# `node_type` the property goes on (as in the IR), the `property` and the
+# `values` that trigger the rule (any one of them; for a list property, the
+# list contains it). An optional `role` narrows which node of that type:
+#   delegate   the agent another agent delegates to
+#   reachable  a tool the agent of the same option can reach
+#   read       the data asset the agent reads
+#   sent_to    the output the agent sends or writes to
+#   shared     memory that more than one agent uses
+# `message` says the same in English for humans; the structured form lets a
+# client render its own text.
+#
+# Only format limits belong here. A rule that the adapter can reach but a given
+# file happens not to trigger is not a gap. Pinned by
+# tests/test_adapter_coverage.py against tests/fixtures/coverage_*.yaml.
+gaps:
+
+  # ── not expressible ────────────────────────────────────────────────────────
+
+  - kind: not_expressible
+    frameworks: [crewai, dify, langgraph]
+    rules: [FH-006]
+    message: >-
+      Fetched web content ends at the tool that fetched it; no adapter passes
+      it on to another agent, so the propagation path FH-006 needs can't occur.
+
+  - kind: not_expressible
+    frameworks: [crewai, dify, langgraph]
+    rules: [FH-015]
+    message: No adapter emits the interpretIntent verb.
+
+  - kind: not_expressible
+    frameworks: [crewai, dify, langgraph]
+    rules: [FH-031]
+    message: No adapter emits the retry verb.
+
+  - kind: not_expressible
+    frameworks: [crewai, langgraph]
+    rules: [FH-030]
+    message: >-
+      Each tool's effect ends at its own output or data asset, so no path
+      passes through two side-effect tools.
+
+  - kind: not_expressible
+    frameworks: [crewai]
+    rules: [FH-001]
+    message: >-
+      Data assets are always leaves: agents read them but nothing flows out of
+      them, so no path carries sensitive data on to an external output.
+
+  - kind: not_expressible
+    frameworks: [crewai]
+    rules: [FH-024]
+    message: >-
+      Agents are linked only through `delegates_to` (delegateTo); task
+      `context` is not mapped to dataFlow.
+
+  - kind: not_expressible
+    frameworks: [dify]
+    rules: [FH-014, FH-023]
+    message: >-
+      Dify edges are workflow transitions (dataFlow); the adapter never emits
+      delegateTo.
+
+  # ── needs declaration ──────────────────────────────────────────────────────
+
+  - kind: needs_declaration
+    frameworks: [crewai, dify, langgraph]
+    rules: [FH-012]
+    declare:
+      - [{ node_type: tool, property: capability_kinds, values: [deployRelease, moveResource] }]
+    message: >-
+      Declare `capability_kinds: [deployRelease]` (or `moveResource`) on the
+      tool; no tool name maps to these verbs.
+
+  - kind: needs_declaration
+    frameworks: [crewai, dify, langgraph]
+    rules: [FH-013]
+    declare:
+      - [{ node_type: output, role: sent_to, property: recipient_type, values: [public_channel, broadcast] }]
+    message: >-
+      Declare `recipient_type: public_channel` (or `broadcast`) on the output
+      the agent sends to.
+
+  - kind: needs_declaration
+    frameworks: [crewai, langgraph]
+    rules: [FH-014]
+    declare:
+      - [{ node_type: agent, role: delegate, property: trust_level, values: [trusted_core] }]
+    message: >-
+      Declare `trust_level: trusted_core` on the agent named in `delegates_to`.
+
+  - kind: needs_declaration
+    frameworks: [crewai, dify, langgraph]
+    rules: [FH-017]
+    declare:
+      - - { node_type: agent, property: exposure_boundary, values: [external] }
+        - { node_type: tool, role: reachable, property: authentication_scope, values: [elevated] }
+    message: >-
+      Declare `exposure_boundary: external` on the agent and
+      `authentication_scope: elevated` on a tool it can reach.
+
+  - kind: needs_declaration
+    frameworks: [crewai, dify, langgraph]
+    rules: [FH-025]
+    # FH-025 also accepts trust_level: untrusted, but data assets don't take
+    # trust_level in a framework file, so boundary is the only way in.
+    declare:
+      - [{ node_type: data_asset, role: read, property: boundary, values: [external] }]
+    message: >-
+      Declare `boundary: external` on the data asset being read.
+
+  - kind: needs_declaration
+    frameworks: [crewai, dify, langgraph]
+    rules: [FH-026]
+    declare:
+      - [{ node_type: data_asset, property: contains_regulated_data, values: [gdpr] }]
+    message: >-
+      Declare `contains_regulated_data: [gdpr]` on the data asset.
+
+  - kind: needs_declaration
+    frameworks: [dify]
+    rules: [FH-004, FH-034]
+    declare:
+      - [{ node_type: output, role: sent_to, property: boundary, values: [external] }]
+    message: >-
+      Answer/end nodes are internal unless declared otherwise; declare
+      `boundary: external` on the one the agent writes to. Outputs created for
+      send tools are external but are fed by the tool, not the agent.
+
+  - kind: needs_declaration
+    frameworks: [langgraph]
+    rules: [FH-009, FH-020]
+    declare:
+      - [{ node_type: memory, role: shared, property: shared, values: [true] }]
+    message: >-
+      Memory nodes are private by default; declare `shared: true` on memory
+      that more than one agent uses.

@@ -12,13 +12,20 @@ import type {
   AnalyzeRequest,
   AnalyzeResponse,
   BackendGraph,
+  CapabilitiesResponse,
   ControlApplication,
   CreateAnalysisResponse,
   DeleteAnalysisResponse,
+  FindingDetailResponse,
   FindingsResponse,
   RecommendationsResponse,
   SimulateControlsResponse,
 } from "./types";
+
+/** Every capability verb with the rules that check it (`GET /capabilities`). */
+export async function getCapabilities(): Promise<CapabilitiesResponse> {
+  return apiFetch<CapabilitiesResponse>("/capabilities");
+}
 
 /** List stored analyses, most recently uploaded first (`GET /analyses`). */
 export async function listAnalyses(): Promise<AnalysesListResponse> {
@@ -29,6 +36,19 @@ export async function listAnalyses(): Promise<AnalysesListResponse> {
  * shape as a row of {@link listAnalyses}, without pulling the whole list. */
 export async function getAnalysis(analysisId: string): Promise<AnalysisListItem> {
   return apiFetch<AnalysisListItem>(`/analyses/${encodeURIComponent(analysisId)}`);
+}
+
+/** Rename a stored analysis (`PATCH /analyses/{id}`). Returns the same shape as
+ * {@link getAnalysis}, with the new (trimmed) name. */
+export async function renameAnalysis(
+  analysisId: string,
+  name: string,
+): Promise<AnalysisListItem> {
+  return apiFetch<AnalysisListItem>(`/analyses/${encodeURIComponent(analysisId)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
 }
 
 /** Delete a stored analysis (`DELETE /analyses/{id}`). */
@@ -73,6 +93,17 @@ export async function getGraph(analysisId: string): Promise<BackendGraph> {
  * (`GET /analyses/{id}/findings`). */
 export async function getFindings(analysisId: string): Promise<FindingsResponse> {
   return apiFetch<FindingsResponse>(`/analyses/${encodeURIComponent(analysisId)}/findings`);
+}
+
+export async function getFinding(
+  analysisId: string,
+  findingId: string,
+  { signal }: { signal?: AbortSignal } = {},
+): Promise<FindingDetailResponse> {
+  return apiFetch<FindingDetailResponse>(
+    `/analyses/${encodeURIComponent(analysisId)}/findings/${encodeURIComponent(findingId)}`,
+    { signal },
+  );
 }
 
 /**

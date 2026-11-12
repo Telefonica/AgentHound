@@ -1,0 +1,38 @@
+# Coverage fixture (CrewAI): reaches every rule the adapter can express, using
+# the declarations listed in app/catalogs/adapter_coverage.yaml. Pinned by
+# tests/test_adapter_coverage.py.
+name: Coverage CrewAI
+# Crew memory is shared by every agent here (FH-009, FH-020, FH-029).
+memory: true
+agents:
+  intake:
+    role: Intake
+    exposure_boundary: external
+    inputs:
+      - {name: Customer chat, trust_level: untrusted}
+    tools:
+      - browser.visit
+      - python.run
+      - records update
+      - records delete
+      - {name: release pipeline, capability_kinds: [deployRelease]}
+      - {name: admin api, authentication_scope: elevated}
+      - gmail.send
+    data_assets:
+      - {name: Customer records, sensitivity: high}
+      - {name: Partner feed, boundary: external}
+      - {name: Patient files, contains_regulated_data: [gdpr]}
+      - Knowledge base
+    outputs:
+      - {name: Ops channel, boundary: external, recipient_type: public_channel}
+    delegates_to: [reviewer]
+  reviewer:
+    role: Reviewer
+    trust_level: trusted_core
+    tools: [slack.postmessage]
+    delegates_to: [publisher]
+  publisher:
+    role: Publisher
+    outputs:
+      - {name: Public site, boundary: external}
+tasks: {}

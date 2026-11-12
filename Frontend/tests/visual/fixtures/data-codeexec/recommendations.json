@@ -1,0 +1,123 @@
+{
+  "recommendations": [
+    {
+      "control_id": "humanInTheLoop",
+      "name": "Human approval",
+      "target_node_id": "tool_python_interpreter",
+      "breaks_findings": [
+        "finding_001",
+        "finding_004",
+        "finding_005"
+      ],
+      "estimated_risk_reduction": 26.6,
+      "cost_estimate": "low",
+      "demo_priority": "must_show"
+    },
+    {
+      "control_id": "delegationScoping",
+      "name": "Delegation scoping",
+      "target_node_id": "agent_data_analyst",
+      "breaks_findings": [
+        "finding_002",
+        "finding_005",
+        "finding_008"
+      ],
+      "estimated_risk_reduction": 21.9,
+      "cost_estimate": "medium",
+      "demo_priority": "should_show"
+    },
+    {
+      "control_id": "sandboxIsolation",
+      "name": "Sandbox isolation",
+      "target_node_id": "tool_python_interpreter",
+      "breaks_findings": [
+        "finding_001",
+        "finding_005"
+      ],
+      "estimated_risk_reduction": 17.8,
+      "cost_estimate": "medium",
+      "demo_priority": "nice_to_have"
+    },
+    {
+      "control_id": "inputSanitization",
+      "name": "Input sanitization",
+      "target_node_id": "agent_request_intake",
+      "breaks_findings": [],
+      "estimated_risk_reduction": 4.5,
+      "cost_estimate": "low",
+      "demo_priority": "should_show"
+    },
+    {
+      "control_id": "interAgentAuthentication",
+      "name": "Inter-agent authentication",
+      "target_node_id": "agent_data_analyst",
+      "breaks_findings": [],
+      "estimated_risk_reduction": 4.5,
+      "cost_estimate": "medium",
+      "demo_priority": "nice_to_have"
+    },
+    {
+      "control_id": "leastPrivilege",
+      "name": "Least privilege",
+      "target_node_id": "tool_sales_database_read",
+      "breaks_findings": [],
+      "estimated_risk_reduction": 3.0,
+      "cost_estimate": "medium",
+      "demo_priority": "should_show"
+    },
+    {
+      "control_id": "commandAllowlist",
+      "name": "Command allowlist",
+      "target_node_id": "tool_python_interpreter",
+      "breaks_findings": [],
+      "estimated_risk_reduction": 3.0,
+      "cost_estimate": "medium",
+      "demo_priority": "nice_to_have"
+    },
+    {
+      "control_id": "dryRunFirst",
+      "name": "Dry run first",
+      "target_node_id": "tool_python_interpreter",
+      "breaks_findings": [],
+      "estimated_risk_reduction": 3.0,
+      "cost_estimate": "low",
+      "demo_priority": "nice_to_have"
+    },
+    {
+      "control_id": "accessScopeRestriction",
+      "name": "Access scope restriction",
+      "target_node_id": "asset_sales_database_read_data",
+      "breaks_findings": [],
+      "estimated_risk_reduction": 1.5,
+      "cost_estimate": "medium",
+      "demo_priority": "should_show"
+    },
+    {
+      "control_id": "dataClassification",
+      "name": "Data classification",
+      "target_node_id": "asset_sales_database_read_data",
+      "breaks_findings": [],
+      "estimated_risk_reduction": 1.5,
+      "cost_estimate": "medium",
+      "demo_priority": "nice_to_have"
+    },
+    {
+      "control_id": "promptInjectionDetector",
+      "name": "Prompt injection detector",
+      "target_node_id": "agent_request_intake",
+      "breaks_findings": [],
+      "estimated_risk_reduction": 0.9,
+      "cost_estimate": "medium",
+      "demo_priority": "must_show"
+    },
+    {
+      "control_id": "promptShielding",
+      "name": "Prompt shielding",
+      "target_node_id": "agent_request_intake",
+      "breaks_findings": [],
+      "estimated_risk_reduction": 0.9,
+      "cost_estimate": "medium",
+      "demo_priority": "should_show"
+    }
+  ]
+}

@@ -11,6 +11,8 @@ import os
 import re
 import threading
 import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 from pydantic import ValidationError
@@ -27,6 +29,9 @@ _DEFAULT_DIR = Path(os.environ.get("AGENTHOUND_DATA_DIR", "data")).resolve()
 _SAFE_ID = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
 
 
+_UPDATE_LOCK_STRIPES = 64
+
+
 def _is_safe_id(analysis_id: str) -> bool:
     return bool(_SAFE_ID.match(analysis_id))
 
@@ -40,6 +45,24 @@ class AnalysisRepository:
         # in-memory cache concurrently. The lock guards cache access; it is not
         # held across disk I/O (the atomic temp-file replace makes writes safe).
         self._lock = threading.Lock()
+        self._update_locks = [threading.Lock() for _ in range(_UPDATE_LOCK_STRIPES)]
+
+    @contextmanager
+    def locked(self, analysis_id: str) -> Iterator[None]:
+        """Hold an analysis' update lock for a read-modify-write.
+
+        Endpoints that read an analysis, change it and save it back (rename,
+        analyze, delete) run inside this, so they cannot interleave and one
+        cannot overwrite the other's change with a stale copy.
+
+        The locks are striped: a fixed set shared by hashing the id, so memory
+        stays bounded whatever ids arrive in URLs, and two analyses only wait
+        on each other when their ids share a stripe. They are per process,
+        which matches the single-process in-memory cache. Not reentrant: do
+        not nest two `locked` blocks.
+        """
+        with self._update_locks[hash(analysis_id) % _UPDATE_LOCK_STRIPES]:
+            yield
 
     def _path(self, analysis_id: str) -> Path:
         if not _is_safe_id(analysis_id):

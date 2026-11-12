@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from ...core.graph.serializer import serialize_graph
+from ...core.rules.grouping import group_findings
 from ...core.storage.repository import repository
 from ..errors import as_http_error
 
@@ -21,7 +22,10 @@ def list_findings(analysis_id: str) -> dict:
         raise as_http_error("ANALYSIS_NOT_FOUND", f"No analysis {analysis_id}.", status_code=404)
     # Findings are already stored in the engine's stable order (score desc, then
     # severity, then rule id); return them as-is to preserve that tie-break.
-    return {"findings": [f.model_dump() for f in result.findings]}
+    # Groups are recomputed from that order (idempotent), which also fills
+    # group_id on analyses stored before grouping existed.
+    groups = group_findings(result.findings)
+    return {"findings": [f.model_dump() for f in result.findings], "groups": groups}
 
 
 @router.get(
@@ -33,6 +37,7 @@ def get_finding(analysis_id: str, finding_id: str) -> dict:
     if result is None:
         raise as_http_error("ANALYSIS_NOT_FOUND", f"No analysis {analysis_id}.", status_code=404)
 
+    group_findings(result.findings)  # fills group_id on pre-grouping analyses
     finding = next((f for f in result.findings if f.id == finding_id), None)
     if finding is None:
         raise as_http_error("FINDING_NOT_FOUND", f"No finding {finding_id}.", status_code=404)

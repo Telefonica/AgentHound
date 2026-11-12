@@ -4,6 +4,11 @@
 # The detection logic itself lives in core/rules/{path_rules,node_rules}.py and
 # is keyed by `id`; this catalog supplies the presentation metadata, base
 # severity, recommended controls and standards mappings attached to findings.
+#
+# Optional `group_by` sets how findings collapse into root-cause groups
+# (core/rules/grouping.py): `rule` = one group for the whole rule (policy-absence
+# rules that fire once per agent/tool/input); `source` (default) = one group per
+# rule and first node on the finding's path.
 rules:
   - id: FH-001
     title: Full exfiltration path
@@ -347,6 +352,7 @@ rules:
   - id: FH-021
     title: External input without sanitization or injection detection
     kind: node
+    group_by: rule
     category: missing_control
     base_severity: medium
     derivation: >-
@@ -364,6 +370,7 @@ rules:
   - id: FH-022
     title: External output without content filter or PII redaction
     kind: node
+    group_by: rule
     category: missing_control
     base_severity: medium
     derivation: >-
@@ -446,6 +453,7 @@ rules:
   - id: FH-027
     title: Side-effect tool without audit logging
     kind: node
+    group_by: rule
     category: compliance_hygiene
     base_severity: medium
     derivation: >-
@@ -461,6 +469,7 @@ rules:
   - id: FH-028
     title: Full-auto agent without decision audit trail
     kind: node
+    group_by: rule
     category: compliance_hygiene
     base_severity: medium
     derivation: >-
@@ -542,6 +551,7 @@ rules:
   - id: FH-033
     title: Prompt injection detector absent on decision-making input path
     kind: node
+    group_by: rule
     category: detection_gap
     base_severity: medium
     derivation: >-
@@ -558,6 +568,7 @@ rules:
   - id: FH-034
     title: DLP scanner absent on sensitive external output
     kind: node
+    group_by: rule
     category: detection_gap
     base_severity: medium
     derivation: >-
@@ -575,6 +586,7 @@ rules:
   - id: FH-035
     title: Anomaly detection absent on full-auto agent
     kind: node
+    group_by: rule
     category: detection_gap
     base_severity: low
     derivation: >-

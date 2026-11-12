@@ -21,10 +21,15 @@ def _load_yaml(name: str) -> dict[str, Any]:
 
 
 @lru_cache(maxsize=1)
+def capability_catalog() -> dict[str, dict[str, Any]]:
+    """Capability descriptors keyed by verb, including ``evaluated_by``."""
+    data = _load_yaml("capabilities.yaml")
+    return dict(data.get("capabilities") or {})
+
+
 def capabilities() -> set[str]:
     """Set of valid capability verbs (spec section 3)."""
-    data = _load_yaml("capabilities.yaml")
-    return set((data.get("capabilities") or {}).keys())
+    return set(capability_catalog())
 
 
 @lru_cache(maxsize=1)
@@ -44,6 +49,12 @@ def rule_catalog() -> dict[str, dict[str, Any]]:
     """Rule descriptors keyed by rule id (spec sections 7-8)."""
     data = _load_yaml("rules.yaml")
     return {rule["id"]: rule for rule in data.get("rules", [])}
+
+
+@lru_cache(maxsize=1)
+def adapter_coverage_catalog() -> list[dict[str, Any]]:
+    """Per-framework rule gaps (``adapter_coverage.yaml``), in catalog order."""
+    return list(_load_yaml("adapter_coverage.yaml").get("gaps") or [])
 
 
 @lru_cache(maxsize=1)

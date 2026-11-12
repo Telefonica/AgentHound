@@ -1,0 +1,784 @@
+{
+  "findings": [
+    {
+      "id": "finding_001",
+      "rule_id": "FH-011",
+      "title": "Destructive modification from untrusted input",
+      "severity": "critical",
+      "score": 10.0,
+      "category": "capability_path",
+      "path": [
+        "input_inbound_maintenance_ticket_email",
+        "agent_ticket_intake",
+        "agent_ops_executor",
+        "tool_customer_records_delete",
+        "asset_customer_records_delete_resource"
+      ],
+      "edges": [
+        "edge_007",
+        "edge_008",
+        "edge_003",
+        "edge_004"
+      ],
+      "derivation": "An untrusted input can drive a modify or delete over a data asset of at least medium sensitivity through a tool that is neither approval-gated nor reversible.",
+      "evidence": {
+        "input_trust_level": "untrusted",
+        "data_sensitivity": "high",
+        "destructive_capability": [
+          "deleteResource"
+        ],
+        "requires_approval": false,
+        "side_effect_reversible": false,
+        "agent_count": 2
+      },
+      "recommended_controls": [
+        "humanInTheLoop",
+        "dryRunFirst",
+        "rollbackReady",
+        "softDeleteFallback"
+      ],
+      "owasp_agentic": [
+        "T6"
+      ],
+      "owasp_llm": [
+        "LLM06"
+      ],
+      "mitre_atlas": [
+        "AML.T0048"
+      ],
+      "finding_class": "attack",
+      "group_id": "group_001"
+    },
+    {
+      "id": "finding_002",
+      "rule_id": "FH-011",
+      "title": "Destructive modification from untrusted input",
+      "severity": "critical",
+      "score": 10.0,
+      "category": "capability_path",
+      "path": [
+        "input_inbound_maintenance_ticket_email",
+        "agent_ticket_intake",
+        "agent_ops_executor",
+        "tool_crm_records_update",
+        "asset_crm_records_update_resource"
+      ],
+      "edges": [
+        "edge_007",
+        "edge_008",
+        "edge_005",
+        "edge_006"
+      ],
+      "derivation": "An untrusted input can drive a modify or delete over a data asset of at least medium sensitivity through a tool that is neither approval-gated nor reversible.",
+      "evidence": {
+        "input_trust_level": "untrusted",
+        "data_sensitivity": "high",
+        "destructive_capability": [
+          "modifyResource"
+        ],
+        "requires_approval": false,
+        "side_effect_reversible": false,
+        "agent_count": 2
+      },
+      "recommended_controls": [
+        "humanInTheLoop",
+        "dryRunFirst",
+        "rollbackReady",
+        "softDeleteFallback"
+      ],
+      "owasp_agentic": [
+        "T6"
+      ],
+      "owasp_llm": [
+        "LLM06"
+      ],
+      "mitre_atlas": [
+        "AML.T0048"
+      ],
+      "finding_class": "attack",
+      "group_id": "group_001"
+    },
+    {
+      "id": "finding_003",
+      "rule_id": "FH-002",
+      "title": "Sensitive read reachable from untrusted input",
+      "severity": "high",
+      "score": 8.8,
+      "category": "capability_path",
+      "path": [
+        "input_inbound_maintenance_ticket_email",
+        "agent_ticket_intake",
+        "agent_ops_executor",
+        "tool_customer_records_database_read",
+        "asset_customer_records_database_read_data"
+      ],
+      "edges": [
+        "edge_007",
+        "edge_008",
+        "edge_001",
+        "edge_002"
+      ],
+      "derivation": "An untrusted input can reach a read over a high/critical sensitivity data asset.",
+      "evidence": {
+        "input_trust_level": "untrusted",
+        "data_sensitivity": "high",
+        "agent_count": 2
+      },
+      "recommended_controls": [
+        "leastPrivilege",
+        "accessScopeRestriction",
+        "inputSanitization",
+        "dataClassification"
+      ],
+      "owasp_agentic": [
+        "T6"
+      ],
+      "owasp_llm": [
+        "LLM06"
+      ],
+      "mitre_atlas": [
+        "AML.T0054"
+      ],
+      "finding_class": "attack",
+      "group_id": "group_002"
+    },
+    {
+      "id": "finding_004",
+      "rule_id": "FH-005",
+      "title": "Tool with side effect missing approval and rollback",
+      "severity": "high",
+      "score": 8.8,
+      "category": "missing_control",
+      "path": [
+        "tool_customer_records_delete"
+      ],
+      "edges": [],
+      "derivation": "A tool declares a side effect that is not reversible and requires no approval before execution, making any invocation permanently impactful.",
+      "evidence": {
+        "tool_id": "tool_customer_records_delete",
+        "side_effect": true,
+        "requires_approval": false,
+        "side_effect_reversible": false
+      },
+      "recommended_controls": [
+        "humanInTheLoop",
+        "rollbackReady",
+        "dryRunFirst"
+      ],
+      "owasp_agentic": [
+        "T4"
+      ],
+      "owasp_llm": [
+        "LLM06"
+      ],
+      "mitre_atlas": [
+        "AML.T0053"
+      ],
+      "finding_class": "attack",
+      "group_id": "group_003"
+    },
+    {
+      "id": "finding_005",
+      "rule_id": "FH-005",
+      "title": "Tool with side effect missing approval and rollback",
+      "severity": "high",
+      "score": 8.8,
+      "category": "missing_control",
+      "path": [
+        "tool_crm_records_update"
+      ],
+      "edges": [],
+      "derivation": "A tool declares a side effect that is not reversible and requires no approval before execution, making any invocation permanently impactful.",
+      "evidence": {
+        "tool_id": "tool_crm_records_update",
+        "side_effect": true,
+        "requires_approval": false,
+        "side_effect_reversible": false
+      },
+      "recommended_controls": [
+        "humanInTheLoop",
+        "rollbackReady",
+        "dryRunFirst"
+      ],
+      "owasp_agentic": [
+        "T4"
+      ],
+      "owasp_llm": [
+        "LLM06"
+      ],
+      "mitre_atlas": [
+        "AML.T0053"
+      ],
+      "finding_class": "attack",
+      "group_id": "group_004"
+    },
+    {
+      "id": "finding_006",
+      "rule_id": "FH-019",
+      "title": "Full-auto agent over irreversible destructive tool",
+      "severity": "high",
+      "score": 8.8,
+      "category": "excessive_autonomy",
+      "path": [
+        "agent_ops_executor",
+        "tool_customer_records_delete"
+      ],
+      "edges": [
+        "edge_003"
+      ],
+      "derivation": "A fully-autonomous agent has direct access to a tool whose side effect is both irreversible and not gated on approval, making any invocation permanently impactful without any human checkpoint.",
+      "evidence": {
+        "agent_id": "agent_ops_executor",
+        "tool_id": "tool_customer_records_delete",
+        "autonomy_level": "full_auto",
+        "side_effect_reversible": false,
+        "requires_approval": false
+      },
+      "recommended_controls": [
+        "humanInTheLoop",
+        "confidenceGating",
+        "dryRunFirst"
+      ],
+      "owasp_agentic": [
+        "T6",
+        "T4"
+      ],
+      "owasp_llm": [
+        "LLM06"
+      ],
+      "mitre_atlas": [
+        "AML.T0053"
+      ],
+      "finding_class": "attack",
+      "group_id": "group_005"
+    },
+    {
+      "id": "finding_007",
+      "rule_id": "FH-019",
+      "title": "Full-auto agent over irreversible destructive tool",
+      "severity": "high",
+      "score": 8.8,
+      "category": "excessive_autonomy",
+      "path": [
+        "agent_ops_executor",
+        "tool_crm_records_update"
+      ],
+      "edges": [
+        "edge_005"
+      ],
+      "derivation": "A fully-autonomous agent has direct access to a tool whose side effect is both irreversible and not gated on approval, making any invocation permanently impactful without any human checkpoint.",
+      "evidence": {
+        "agent_id": "agent_ops_executor",
+        "tool_id": "tool_crm_records_update",
+        "autonomy_level": "full_auto",
+        "side_effect_reversible": false,
+        "requires_approval": false
+      },
+      "recommended_controls": [
+        "humanInTheLoop",
+        "confidenceGating",
+        "dryRunFirst"
+      ],
+      "owasp_agentic": [
+        "T6",
+        "T4"
+      ],
+      "owasp_llm": [
+        "LLM06"
+      ],
+      "mitre_atlas": [
+        "AML.T0053"
+      ],
+      "finding_class": "attack",
+      "group_id": "group_005"
+    },
+    {
+      "id": "finding_008",
+      "rule_id": "FH-032",
+      "title": "Deployment or deletion tool without rollback",
+      "severity": "high",
+      "score": 8.8,
+      "category": "operational_risk",
+      "path": [
+        "tool_customer_records_delete"
+      ],
+      "edges": [],
+      "derivation": "A tool used for deployRelease or deleteResource has its side effect marked as irreversible and no rollbackReady control is applied, making any invocation permanently impactful.",
+      "evidence": {
+        "tool_id": "tool_customer_records_delete",
+        "deploy_delete_caps": [
+          "deleteResource"
+        ],
+        "side_effect_reversible": false,
+        "rollback_ready": false
+      },
+      "recommended_controls": [
+        "rollbackReady",
+        "dryRunFirst",
+        "humanInTheLoop"
+      ],
+      "owasp_agentic": [],
+      "owasp_llm": [],
+      "mitre_atlas": [],
+      "finding_class": "attack",
+      "group_id": "group_006"
+    },
+    {
+      "id": "finding_009",
+      "rule_id": "FH-021",
+      "title": "External input without sanitization or injection detection",
+      "severity": "high",
+      "score": 7.6,
+      "category": "missing_control",
+      "path": [
+        "input_inbound_maintenance_ticket_email"
+      ],
+      "edges": [],
+      "derivation": "An untrusted input node has neither pre-agent sanitization nor an injection detector, leaving every downstream agent exposed to attacker-crafted content.",
+      "evidence": {
+        "input_id": "input_inbound_maintenance_ticket_email",
+        "trust_level": "untrusted",
+        "sanitized_before_agent": false,
+        "injection_detector_present": false
+      },
+      "recommended_controls": [
+        "inputSanitization",
+        "promptShielding",
+        "sourceAuthentication"
+      ],
+      "owasp_agentic": [
+        "T6"
+      ],
+      "owasp_llm": [
+        "LLM01"
+      ],
+      "mitre_atlas": [
+        "AML.T0054"
+      ],
+      "finding_class": "hygiene",
+      "group_id": "group_007"
+    },
+    {
+      "id": "finding_010",
+      "rule_id": "FH-033",
+      "title": "Prompt injection detector absent on decision-making input path",
+      "severity": "high",
+      "score": 7.6,
+      "category": "detection_gap",
+      "path": [
+        "input_inbound_maintenance_ticket_email",
+        "agent_ticket_intake"
+      ],
+      "edges": [
+        "edge_007"
+      ],
+      "derivation": "An untrusted input node feeds a decision-making agent (full_auto or interpretIntent) without an injection detector, leaving the agent vulnerable to prompt injection without any detection layer.",
+      "evidence": {
+        "input_id": "input_inbound_maintenance_ticket_email",
+        "trust_level": "untrusted",
+        "injection_detector_present": false,
+        "decision_agent": "agent_ticket_intake"
+      },
+      "recommended_controls": [
+        "promptInjectionDetector",
+        "promptShielding"
+      ],
+      "owasp_agentic": [
+        "T6"
+      ],
+      "owasp_llm": [
+        "LLM01"
+      ],
+      "mitre_atlas": [
+        "AML.T0054"
+      ],
+      "finding_class": "hygiene",
+      "group_id": "group_008"
+    },
+    {
+      "id": "finding_011",
+      "rule_id": "FH-023",
+      "title": "Unscoped delegation between agents with disjoint capabilities",
+      "severity": "medium",
+      "score": 5.1,
+      "category": "lateral_propagation",
+      "path": [
+        "agent_ticket_intake",
+        "agent_ops_executor"
+      ],
+      "edges": [
+        "edge_008"
+      ],
+      "derivation": "A delegateTo edge connects two agents without scoped delegation and the target agent has capabilities the source agent lacks, granting implicit privilege escalation through the delegation.",
+      "evidence": {
+        "source_agent": "agent_ticket_intake",
+        "target_agent": "agent_ops_executor",
+        "has_scoped_delegation": false
+      },
+      "recommended_controls": [
+        "delegationScoping",
+        "interAgentAuthentication"
+      ],
+      "owasp_agentic": [
+        "T5"
+      ],
+      "owasp_llm": [
+        "LLM06"
+      ],
+      "mitre_atlas": [
+        "AML.T0054"
+      ],
+      "finding_class": "attack",
+      "group_id": "group_009"
+    },
+    {
+      "id": "finding_012",
+      "rule_id": "FH-027",
+      "title": "Side-effect tool without audit logging",
+      "severity": "medium",
+      "score": 4.8,
+      "category": "compliance_hygiene",
+      "path": [
+        "tool_customer_records_delete"
+      ],
+      "edges": [],
+      "derivation": "A tool with a declared side effect has audit logging disabled, leaving no record of the action's execution for forensics or compliance review.",
+      "evidence": {
+        "tool_id": "tool_customer_records_delete",
+        "side_effect": true,
+        "audit_logging_enabled": false
+      },
+      "recommended_controls": [
+        "auditLogging",
+        "immutableLogs"
+      ],
+      "owasp_agentic": [],
+      "owasp_llm": [],
+      "mitre_atlas": [],
+      "finding_class": "hygiene",
+      "group_id": "group_010"
+    },
+    {
+      "id": "finding_013",
+      "rule_id": "FH-027",
+      "title": "Side-effect tool without audit logging",
+      "severity": "medium",
+      "score": 4.8,
+      "category": "compliance_hygiene",
+      "path": [
+        "tool_crm_records_update"
+      ],
+      "edges": [],
+      "derivation": "A tool with a declared side effect has audit logging disabled, leaving no record of the action's execution for forensics or compliance review.",
+      "evidence": {
+        "tool_id": "tool_crm_records_update",
+        "side_effect": true,
+        "audit_logging_enabled": false
+      },
+      "recommended_controls": [
+        "auditLogging",
+        "immutableLogs"
+      ],
+      "owasp_agentic": [],
+      "owasp_llm": [],
+      "mitre_atlas": [],
+      "finding_class": "hygiene",
+      "group_id": "group_010"
+    },
+    {
+      "id": "finding_014",
+      "rule_id": "FH-028",
+      "title": "Full-auto agent without decision audit trail",
+      "severity": "medium",
+      "score": 4.8,
+      "category": "compliance_hygiene",
+      "path": [
+        "agent_ticket_intake"
+      ],
+      "edges": [],
+      "derivation": "A fully-autonomous agent makes decisions without a decisionAuditTrail control, leaving autonomous choices unrecorded and non-explainable to auditors.",
+      "evidence": {
+        "agent_id": "agent_ticket_intake",
+        "autonomy_level": "full_auto",
+        "decision_audit_trail": false
+      },
+      "recommended_controls": [
+        "decisionAuditTrail",
+        "explainability"
+      ],
+      "owasp_agentic": [],
+      "owasp_llm": [],
+      "mitre_atlas": [],
+      "finding_class": "hygiene",
+      "group_id": "group_011"
+    },
+    {
+      "id": "finding_015",
+      "rule_id": "FH-028",
+      "title": "Full-auto agent without decision audit trail",
+      "severity": "medium",
+      "score": 4.8,
+      "category": "compliance_hygiene",
+      "path": [
+        "agent_ops_executor"
+      ],
+      "edges": [],
+      "derivation": "A fully-autonomous agent makes decisions without a decisionAuditTrail control, leaving autonomous choices unrecorded and non-explainable to auditors.",
+      "evidence": {
+        "agent_id": "agent_ops_executor",
+        "autonomy_level": "full_auto",
+        "decision_audit_trail": false
+      },
+      "recommended_controls": [
+        "decisionAuditTrail",
+        "explainability"
+      ],
+      "owasp_agentic": [],
+      "owasp_llm": [],
+      "mitre_atlas": [],
+      "finding_class": "hygiene",
+      "group_id": "group_011"
+    },
+    {
+      "id": "finding_016",
+      "rule_id": "FH-035",
+      "title": "Anomaly detection absent on full-auto agent",
+      "severity": "low",
+      "score": 2.8,
+      "category": "detection_gap",
+      "path": [
+        "agent_ticket_intake"
+      ],
+      "edges": [],
+      "derivation": "A fully-autonomous agent operates without an anomaly-detection control, providing no visibility into unexpected or adversarially-induced behaviour deviations.",
+      "evidence": {
+        "agent_id": "agent_ticket_intake",
+        "autonomy_level": "full_auto",
+        "anomaly_detection": false
+      },
+      "recommended_controls": [
+        "anomalyDetection",
+        "auditLogging"
+      ],
+      "owasp_agentic": [],
+      "owasp_llm": [],
+      "mitre_atlas": [],
+      "finding_class": "hygiene",
+      "group_id": "group_012"
+    },
+    {
+      "id": "finding_017",
+      "rule_id": "FH-035",
+      "title": "Anomaly detection absent on full-auto agent",
+      "severity": "low",
+      "score": 2.8,
+      "category": "detection_gap",
+      "path": [
+        "agent_ops_executor"
+      ],
+      "edges": [],
+      "derivation": "A fully-autonomous agent operates without an anomaly-detection control, providing no visibility into unexpected or adversarially-induced behaviour deviations.",
+      "evidence": {
+        "agent_id": "agent_ops_executor",
+        "autonomy_level": "full_auto",
+        "anomaly_detection": false
+      },
+      "recommended_controls": [
+        "anomalyDetection",
+        "auditLogging"
+      ],
+      "owasp_agentic": [],
+      "owasp_llm": [],
+      "mitre_atlas": [],
+      "finding_class": "hygiene",
+      "group_id": "group_012"
+    }
+  ],
+  "groups": [
+    {
+      "group_id": "group_001",
+      "rule_id": "FH-011",
+      "title": "Destructive modification from untrusted input",
+      "group_by": "source",
+      "anchor_node_id": "input_inbound_maintenance_ticket_email",
+      "finding_class": "attack",
+      "count": 2,
+      "max_score": 10.0,
+      "severity": "critical",
+      "representative_finding_id": "finding_001",
+      "finding_ids": [
+        "finding_001",
+        "finding_002"
+      ]
+    },
+    {
+      "group_id": "group_002",
+      "rule_id": "FH-002",
+      "title": "Sensitive read reachable from untrusted input",
+      "group_by": "source",
+      "anchor_node_id": "input_inbound_maintenance_ticket_email",
+      "finding_class": "attack",
+      "count": 1,
+      "max_score": 8.8,
+      "severity": "high",
+      "representative_finding_id": "finding_003",
+      "finding_ids": [
+        "finding_003"
+      ]
+    },
+    {
+      "group_id": "group_003",
+      "rule_id": "FH-005",
+      "title": "Tool with side effect missing approval and rollback",
+      "group_by": "source",
+      "anchor_node_id": "tool_customer_records_delete",
+      "finding_class": "attack",
+      "count": 1,
+      "max_score": 8.8,
+      "severity": "high",
+      "representative_finding_id": "finding_004",
+      "finding_ids": [
+        "finding_004"
+      ]
+    },
+    {
+      "group_id": "group_004",
+      "rule_id": "FH-005",
+      "title": "Tool with side effect missing approval and rollback",
+      "group_by": "source",
+      "anchor_node_id": "tool_crm_records_update",
+      "finding_class": "attack",
+      "count": 1,
+      "max_score": 8.8,
+      "severity": "high",
+      "representative_finding_id": "finding_005",
+      "finding_ids": [
+        "finding_005"
+      ]
+    },
+    {
+      "group_id": "group_005",
+      "rule_id": "FH-019",
+      "title": "Full-auto agent over irreversible destructive tool",
+      "group_by": "source",
+      "anchor_node_id": "agent_ops_executor",
+      "finding_class": "attack",
+      "count": 2,
+      "max_score": 8.8,
+      "severity": "high",
+      "representative_finding_id": "finding_006",
+      "finding_ids": [
+        "finding_006",
+        "finding_007"
+      ]
+    },
+    {
+      "group_id": "group_006",
+      "rule_id": "FH-032",
+      "title": "Deployment or deletion tool without rollback",
+      "group_by": "source",
+      "anchor_node_id": "tool_customer_records_delete",
+      "finding_class": "attack",
+      "count": 1,
+      "max_score": 8.8,
+      "severity": "high",
+      "representative_finding_id": "finding_008",
+      "finding_ids": [
+        "finding_008"
+      ]
+    },
+    {
+      "group_id": "group_007",
+      "rule_id": "FH-021",
+      "title": "External input without sanitization or injection detection",
+      "group_by": "rule",
+      "anchor_node_id": null,
+      "finding_class": "hygiene",
+      "count": 1,
+      "max_score": 7.6,
+      "severity": "high",
+      "representative_finding_id": "finding_009",
+      "finding_ids": [
+        "finding_009"
+      ]
+    },
+    {
+      "group_id": "group_008",
+      "rule_id": "FH-033",
+      "title": "Prompt injection detector absent on decision-making input path",
+      "group_by": "rule",
+      "anchor_node_id": null,
+      "finding_class": "hygiene",
+      "count": 1,
+      "max_score": 7.6,
+      "severity": "high",
+      "representative_finding_id": "finding_010",
+      "finding_ids": [
+        "finding_010"
+      ]
+    },
+    {
+      "group_id": "group_009",
+      "rule_id": "FH-023",
+      "title": "Unscoped delegation between agents with disjoint capabilities",
+      "group_by": "source",
+      "anchor_node_id": "agent_ticket_intake",
+      "finding_class": "attack",
+      "count": 1,
+      "max_score": 5.1,
+      "severity": "medium",
+      "representative_finding_id": "finding_011",
+      "finding_ids": [
+        "finding_011"
+      ]
+    },
+    {
+      "group_id": "group_010",
+      "rule_id": "FH-027",
+      "title": "Side-effect tool without audit logging",
+      "group_by": "rule",
+      "anchor_node_id": null,
+      "finding_class": "hygiene",
+      "count": 2,
+      "max_score": 4.8,
+      "severity": "medium",
+      "representative_finding_id": "finding_012",
+      "finding_ids": [
+        "finding_012",
+        "finding_013"
+      ]
+    },
+    {
+      "group_id": "group_011",
+      "rule_id": "FH-028",
+      "title": "Full-auto agent without decision audit trail",
+      "group_by": "rule",
+      "anchor_node_id": null,
+      "finding_class": "hygiene",
+      "count": 2,
+      "max_score": 4.8,
+      "severity": "medium",
+      "representative_finding_id": "finding_014",
+      "finding_ids": [
+        "finding_014",
+        "finding_015"
+      ]
+    },
+    {
+      "group_id": "group_012",
+      "rule_id": "FH-035",
+      "title": "Anomaly detection absent on full-auto agent",
+      "group_by": "rule",
+      "anchor_node_id": null,
+      "finding_class": "hygiene",
+      "count": 2,
+      "max_score": 2.8,
+      "severity": "low",
+      "representative_finding_id": "finding_016",
+      "finding_ids": [
+        "finding_016",
+        "finding_017"
+      ]
+    }
+  ]
+}

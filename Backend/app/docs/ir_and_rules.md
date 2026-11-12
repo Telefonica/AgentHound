@@ -29,9 +29,22 @@ Models live in [`core/ir/models.py`](../core/ir/models.py).
 
 ## Capability catalog (spec §3)
 
-Defined in [`catalogs/capabilities.yaml`](../catalogs/capabilities.yaml):
-`receiveInstruction, read, fetchWeb, send, modifyResource, deleteResource,
-executeCode, delegateTo, dataFlow, readMemory, writeMemory, invokeTool`.
+Defined in [`catalogs/capabilities.yaml`](../catalogs/capabilities.yaml): 53
+verbs in nine phases of the agent cycle. Each verb's `evaluated_by` lists the
+rules that check for it. Only 18 verbs have a non-empty list; the
+rest are vocabulary only: accepted on edges and drawn in the graph, but no rule
+fires because of them. `tests/test_capability_catalog.py` re-derives the lists
+from the rule modules and fails when they drift.
+
+## Adapter coverage
+
+Only the generic format can express every rule. Each framework adapter has
+gaps, listed in [`catalogs/adapter_coverage.yaml`](../catalogs/adapter_coverage.yaml)
+and returned as `warnings[]` with every framework analysis (see `api.md`):
+`not_expressible` rules can't fire whatever the file says, and
+`needs_declaration` rules fire once the file declares the named property.
+`tests/test_adapter_coverage.py` pins the catalog with one fixture per framework
+that reaches exactly the expressible rules.
 
 ## Safe defaults (spec §4.2)
 

@@ -11,6 +11,8 @@ import { palette } from "./cyberSkin";
 
 export type Severity = "critical" | "high" | "medium" | "low" | "none";
 
+export const SEVERITY_RANK: Record<Severity, number> = { critical: 4, high: 3, medium: 2, low: 1, none: 0 };
+
 export interface SeverityStyle {
   /** Tag pill background — fixed, self-contained contrast with `text`, independent of page theme. */
   background: string;
