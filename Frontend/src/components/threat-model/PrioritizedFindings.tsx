@@ -1,4 +1,4 @@
-import { useCallback, useId, useMemo, useState } from "react";
+import { useCallback, useDeferredValue, useId, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   Box,
@@ -8,14 +8,18 @@ import {
   IconChevronUpRegular,
   Inline,
   Stack,
-  Tag,
   Text1,
+  Text3,
   Touchable,
   skinVars,
   useTheme,
 } from "@telefonica/mistica";
+import SeverityBadge from "@/components/threat-model/SeverityBadge";
+import FindingsFilterBar from "@/components/threat-model/FindingsFilterBar";
 import { ShowMoreOccurrences, useCappedOccurrences } from "@/components/threat-model/CappedOccurrences";
 import { capped, groupFindings, routeSummary, type FindingPattern, type NodesById } from "@/lib/results/findingDisplay";
+import { buildSearchIndex, filterFindings, isFiltering } from "@/lib/results/findingSearch";
+import type { Severity } from "@/lib/severity";
 import { usePatternTitle } from "@/lib/results/usePatternTitle";
 import { severityAccentColor } from "@/lib/threatModelColors";
 import type { Finding } from "@/types/ThreatModel";
@@ -103,9 +107,11 @@ function GroupRows({ group, expanded, onToggle, findingLabelById, nodesById, sel
             <Inline space={4} alignItems="center" wrap verticalSpace={2}>
               <Text1 medium color={severityAccentColor(top.severity, isDarkMode)}>{top.ruleId}</Text1>
               <Text1 regular color={skinVars.colors.textSecondary}>{t("findingSummary", { title, score: top.score })}</Text1>
-              <Tag type="inactive" small>{t("findingGroupCount", { count: group.findings.length })}</Tag>
             </Inline>
-            <Chevron size={16} color={skinVars.colors.textSecondary} />
+            <Inline space={8} alignItems="center">
+              <SeverityBadge severity={top.severity} small dataAttributes={{ testid: "finding-count" }}>{t("findingGroupCount", { count: group.findings.length })}</SeverityBadge>
+              <Chevron size={16} color={skinVars.colors.textSecondary} />
+            </Inline>
           </Inline>
         </Box>
       </Touchable>
@@ -143,11 +149,49 @@ function PrioritizedFindings({ findings, findingLabelById, nodesById, selectedFi
   const { isDarkMode } = useTheme();
   const patternTitle = usePatternTitle(nodesById);
   const listId = useId();
-  const groups = useMemo(() => groupFindings(findings), [findings]);
+  const [query, setQuery] = useState("");
+  const [severities, setSeverities] = useState<ReadonlySet<Severity>>(() => new Set());
+  const deferredQuery = useDeferredValue(query);
+  const filter = useMemo(() => ({ query: deferredQuery, severities }), [deferredQuery, severities]);
+  const filtering = isFiltering(filter);
+  const toggleSeverity = useCallback((severity: Severity) => {
+    setSeverities((prev) => {
+      const next = new Set(prev);
+      if (!next.delete(severity)) next.add(severity);
+      return next;
+    });
+  }, []);
+  const clearFilters = useCallback(() => {
+    setQuery("");
+    setSeverities(new Set());
+  }, []);
+  const severityCounts = useMemo(() => {
+    const counts: Record<Severity, number> = { critical: 0, high: 0, medium: 0, low: 0, none: 0 };
+    for (const f of findings) counts[f.severity] += 1;
+    return counts;
+  }, [findings]);
+  const searchIndex = useMemo(
+    () => buildSearchIndex(findings, findingLabelById, nodesById),
+    [findings, findingLabelById, nodesById],
+  );
+  const matching = useMemo(() => filterFindings(findings, filter, searchIndex), [findings, filter, searchIndex]);
+  const listed = useMemo(() => {
+    if (!selectedFindingId || matching.some((f) => f.id === selectedFindingId)) return matching;
+    const shown = new Set(matching);
+    return findings.filter((f) => shown.has(f) || f.id === selectedFindingId);
+  }, [findings, matching, selectedFindingId]);
+  const groups = useMemo(() => groupFindings(listed), [listed]);
+  const patternCount = useMemo(() => groupFindings(findings).length, [findings]);
   const [showAll, setShowAll] = useState(false);
-  const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set());
+  const openByDefault = deferredQuery.trim() !== "";
+  const [toggled, setToggled] = useState<ReadonlySet<string>>(() => new Set());
+  const [seenOpenByDefault, setSeenOpenByDefault] = useState(openByDefault);
+  if (seenOpenByDefault !== openByDefault) {
+    setSeenOpenByDefault(openByDefault);
+    setToggled(new Set());
+  }
   const toggleGroup = useCallback((id: string) => {
-    setExpanded((prev) => {
+    setToggled((prev) => {
       const next = new Set(prev);
       if (!next.delete(id)) next.add(id);
       return next;
@@ -159,16 +203,34 @@ function PrioritizedFindings({ findings, findingLabelById, nodesById, selectedFi
 
   return (
     <Boxed dataAttributes={{ testid: "prioritized-findings" }}>
-      <Box paddingX={16} paddingY={12}>
-        <Stack space={8}>
-          <Inline space={8} alignItems="baseline" wrap verticalSpace={2}>
-            <Text1 medium color={skinVars.colors.error}>{t("prioritizedFindings")}</Text1>
+      <Box paddingX={20} paddingY={20}>
+        <Stack space={16}>
+          <Inline space={12} alignItems="baseline" wrap verticalSpace={2}>
+            <Text3 medium color={skinVars.colors.error}>{t("prioritizedFindings")}</Text3>
             <Text1 regular color={skinVars.colors.textSecondary}>
-              {t("prioritizedFindingsCount", { findings: findings.length, groups: groups.length })}
+              {t("prioritizedFindingsCount", { findings: findings.length, groups: patternCount })}
             </Text1>
           </Inline>
+          <FindingsFilterBar
+            query={query}
+            onQueryChange={setQuery}
+            severities={severities}
+            severityCounts={severityCounts}
+            onToggleSeverity={toggleSeverity}
+            matching={matching.length}
+            total={findings.length}
+            filtering={filtering}
+          />
+          {matching.length === 0 && (
+            <Stack space={4} dataAttributes={{ testid: "findings-empty" }}>
+              <Text1 regular color={skinVars.colors.textSecondary}>{t("noFindingsMatch")}</Text1>
+              <Box>
+                <ButtonLink small bleedLeft onPress={clearFilters}>{t("clearFilters")}</ButtonLink>
+              </Box>
+            </Stack>
+          )}
           <Box id={listId}>
-            <Stack space={2}>
+            <Stack space={8}>
               {visibleGroups.map((group) => {
                 const [only] = group.findings;
                 return group.findings.length === 1 ? (
@@ -185,7 +247,7 @@ function PrioritizedFindings({ findings, findingLabelById, nodesById, selectedFi
                   <GroupRows
                     key={group.id}
                     group={group}
-                    expanded={expanded.has(group.id)}
+                    expanded={toggled.has(group.id) !== openByDefault}
                     onToggle={toggleGroup}
                     findingLabelById={findingLabelById}
                     nodesById={nodesById}

@@ -24,7 +24,7 @@ test.describe("Finding patterns", () => {
     await openAttackGroup(page);
 
     await expect(page.getByRole("button", { name: /Attack Paths/ })).toContainText("causes");
-    await expect(pattern(page, "FH-011")).toContainText("2 findings");
+    await expect(pattern(page, "FH-011").getByTestId("finding-count")).toHaveText("2 findings");
     await expect(page.getByTestId("finding-card").filter({ hasText: "FH-011 #1" })).toHaveCount(0);
     await expect(pattern(page, "FH-011")).toHaveScreenshot("pattern-fh-011-collapsed.png");
   });

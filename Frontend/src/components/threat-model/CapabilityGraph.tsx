@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Box, Boxed, Inline, Stack, Text1, IconSearchRegular, skinVars } from "@telefonica/mistica";
+import { Box, Boxed, Inline, Stack, Text1, Text3, IconSearchRegular, skinVars } from "@telefonica/mistica";
 import NodeDetailDrawer from "@/components/threat-model/NodeDetailDrawer";
 import PrioritizedFindings from "@/components/threat-model/PrioritizedFindings";
 import CyberGraph, { type CyberGraphHandle, type GraphHighlight } from "@/components/threat-model/graph/CyberGraph";
@@ -230,11 +230,11 @@ function CapabilityGraph({ analysisId, solved, nodes, edges, findings, attacks, 
 
       {!solved && !isolatedGraph && primaryPath && (
         <Boxed dataAttributes={{ testid: "primary-path" }}>
-          <Box paddingX={16} paddingY={12}>
-            <Stack space={8}>
-              <Inline space={8} alignItems="center" wrap verticalSpace={4}>
-                <span style={{ display: "block", width: 8, height: 8, borderRadius: "50%", background: skinVars.colors.error }} />
-                <Text1 medium color={skinVars.colors.error}>{t("primaryPath")}</Text1>
+          <Box paddingX={20} paddingY={20}>
+            <Stack space={12}>
+              <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "4px 8px" }}>
+                <span style={{ flex: "none", width: 8, height: 8, borderRadius: "50%", background: skinVars.colors.error }} />
+                <Text3 medium color={skinVars.colors.error}>{t("primaryPath")}</Text3>
                 <span
                   style={{
                     padding: "1px 7px",
@@ -248,16 +248,16 @@ function CapabilityGraph({ analysisId, solved, nodes, edges, findings, attacks, 
                 >
                   {primaryPath.label}
                 </span>
-              </Inline>
-              <Inline space={4} alignItems="center" wrap verticalSpace={4}>
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "4px 8px" }}>
                 {primaryPath.steps.map((n, i) => (
-                  <Inline key={`${n.id}-${i}`} space={4} alignItems="center">
+                  <span key={`${n.id}-${i}`} style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
                     {i > 0 && <Text1 regular color={skinVars.colors.textSecondary}>→</Text1>}
-                    <span style={{ display: "block", width: 7, height: 7, borderRadius: "50%", background: NODE_STYLE[n.type].accent }} />
+                    <span style={{ flex: "none", width: 7, height: 7, borderRadius: "50%", background: NODE_STYLE[n.type].accent }} />
                     <Text1 regular>{n.label.replace(/\n/g, " ")}</Text1>
-                  </Inline>
+                  </span>
                 ))}
-              </Inline>
+              </div>
             </Stack>
           </Box>
         </Boxed>

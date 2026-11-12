@@ -46,7 +46,7 @@ test.describe("Prioritized findings at scale", () => {
     await expect(box(page)).toContainText(`${LARGE.findings.length} findings · ${GROUPS} patterns`);
     await expect(topLevelRows(page)).toHaveCount(5);
     const { height } = (await box(page).boundingBox())!;
-    expect(height).toBeLessThan(320);
+    expect(height).toBeLessThan(440);
     const boxBottom = await box(page).evaluate((el) => el.getBoundingClientRect().bottom);
     const metricsTop = await page.getByRole("heading", { name: "Risk Metrics" }).evaluate((el) => el.getBoundingClientRect().top);
     expect(metricsTop - boxBottom).toBeLessThan(80);
@@ -60,6 +60,7 @@ test.describe("Prioritized findings at scale", () => {
     await expect(firstGroup(page)).toHaveText(
       "FH-011Destructive modification from untrusted input from Inbound maintenance ticket email · score 1024 findings",
     );
+    await expect(firstGroup(page).getByTestId("finding-count")).toHaveText("24 findings");
     await expect(rows(page).filter({ hasText: /^FH-011 #/ })).toHaveCount(0);
   });
 
