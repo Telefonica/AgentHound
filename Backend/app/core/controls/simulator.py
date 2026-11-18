@@ -33,6 +33,7 @@ from ..ir.models import (
     Severity,
 )
 from ..rules.engine import run_rules
+from ..rules.grouping import grouped_total
 from ..rules.scoring import severity_from_score
 
 # Score credit subtracted per mitigated hop on a surviving finding's path (spec
@@ -183,12 +184,19 @@ def _summary(findings: list[Finding]) -> dict:
     }
 
 
-def _risk_reduction(before: list[Finding], after: list[Finding]) -> dict:
-    before_total = sum(f.score for f in before)
-    after_total = sum(f.score for f in after)
+def _reduction(before_total: float, after_total: float) -> dict:
     absolute = round(before_total - after_total, 1)
     percentage = round((absolute / before_total) * 100, 1) if before_total > 0 else 0.0
     return {"absolute": absolute, "percentage": percentage}
+
+
+def _risk_reduction(before: list[Finding], after: list[Finding]) -> dict:
+    # The top-level figure sums every finding, so a cause that repeats N times
+    # counts N times. ``by_group`` counts each root-cause group once at its
+    # highest score so repeated occurrences don't inflate the total.
+    reduction = _reduction(sum(f.score for f in before), sum(f.score for f in after))
+    reduction["by_group"] = _reduction(grouped_total(before), grouped_total(after))
+    return reduction
 
 
 def _broken_paths(

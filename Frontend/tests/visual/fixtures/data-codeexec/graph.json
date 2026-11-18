@@ -1,0 +1,279 @@
+{
+  "nodes": [
+    {
+      "id": "input_user_analysis_request",
+      "label": "User analysis request",
+      "type": "input",
+      "risk_score": 8.8,
+      "risk_level": "high",
+      "finding_ids": [
+        "finding_002",
+        "finding_005",
+        "finding_006",
+        "finding_007"
+      ],
+      "properties": {
+        "trust_level": "untrusted",
+        "content_types": [],
+        "authenticated_source": false,
+        "contains_pii_potential": true,
+        "sanitized_before_agent": false,
+        "injection_detector_present": false,
+        "rate_limit_present": false,
+        "replay_protection": false,
+        "source_type": "user_input"
+      },
+      "badges": [
+        "untrusted"
+      ]
+    },
+    {
+      "id": "agent_request_intake",
+      "label": "request_intake",
+      "type": "agent",
+      "risk_score": 8.8,
+      "risk_level": "high",
+      "finding_ids": [
+        "finding_002",
+        "finding_005",
+        "finding_007",
+        "finding_008",
+        "finding_010",
+        "finding_012"
+      ],
+      "properties": {
+        "role_type": "worker",
+        "trust_level": "untrusted",
+        "autonomy_level": "full_auto",
+        "guardrails": [],
+        "exposure_boundary": "internal",
+        "has_scoped_delegation": false
+      },
+      "badges": [
+        "full_auto",
+        "no_guardrails"
+      ]
+    },
+    {
+      "id": "agent_data_analyst",
+      "label": "data_analyst",
+      "type": "agent",
+      "risk_score": 8.8,
+      "risk_level": "high",
+      "finding_ids": [
+        "finding_002",
+        "finding_004",
+        "finding_005",
+        "finding_008",
+        "finding_011",
+        "finding_013"
+      ],
+      "properties": {
+        "role_type": "worker",
+        "trust_level": "internal_logic",
+        "autonomy_level": "full_auto",
+        "guardrails": [],
+        "exposure_boundary": "internal",
+        "has_scoped_delegation": false
+      },
+      "badges": [
+        "full_auto",
+        "no_guardrails"
+      ]
+    },
+    {
+      "id": "tool_python_interpreter",
+      "label": "python_interpreter",
+      "type": "tool",
+      "risk_score": 9.8,
+      "risk_level": "critical",
+      "finding_ids": [
+        "finding_001",
+        "finding_003",
+        "finding_004",
+        "finding_005",
+        "finding_009"
+      ],
+      "properties": {
+        "operation_kind": "execute",
+        "target_boundary": "internal",
+        "side_effect": true,
+        "side_effect_reversible": false,
+        "idempotent": false,
+        "requires_approval": false,
+        "approval_actor_role": "",
+        "authentication_scope": "agent_service_account",
+        "allowlist_present": false,
+        "rate_limit_present": false,
+        "sandbox_enabled": false,
+        "dry_run_available": false,
+        "audit_logging_enabled": false,
+        "capability_kinds": [
+          "executeCode"
+        ],
+        "access_kind": "internal_read"
+      },
+      "badges": [
+        "side_effect",
+        "no_approval"
+      ]
+    },
+    {
+      "id": "tool_sales_database_read",
+      "label": "Sales Database read",
+      "type": "tool",
+      "risk_score": 8.8,
+      "risk_level": "high",
+      "finding_ids": [
+        "finding_002"
+      ],
+      "properties": {
+        "operation_kind": "read",
+        "target_boundary": "internal",
+        "side_effect": false,
+        "side_effect_reversible": true,
+        "idempotent": false,
+        "requires_approval": false,
+        "approval_actor_role": "",
+        "authentication_scope": "agent_service_account",
+        "allowlist_present": false,
+        "rate_limit_present": false,
+        "sandbox_enabled": false,
+        "dry_run_available": false,
+        "audit_logging_enabled": false,
+        "capability_kinds": [
+          "read"
+        ],
+        "access_kind": "internal_read"
+      },
+      "badges": [
+        "no_approval"
+      ]
+    },
+    {
+      "id": "asset_sales_database_read_data",
+      "label": "Sales Database read data",
+      "type": "data_asset",
+      "risk_score": 8.8,
+      "risk_level": "high",
+      "finding_ids": [
+        "finding_002"
+      ],
+      "properties": {
+        "sensitivity": "high",
+        "boundary": "internal",
+        "contains_pii": true,
+        "contains_credentials": false,
+        "contains_regulated_data": [],
+        "access_scope": "all_users",
+        "retention_ttl_days": null,
+        "encryption_at_rest": false,
+        "asset_kind": "database"
+      },
+      "badges": [
+        "high_sensitivity",
+        "pii"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_001",
+      "source": "agent_data_analyst",
+      "target": "tool_python_interpreter",
+      "label": "invokeTool",
+      "capability": "invokeTool",
+      "properties": {},
+      "risk_level": "high",
+      "blocked": false,
+      "mitigated": false,
+      "detected": false,
+      "finding_ids": [
+        "finding_004",
+        "finding_005"
+      ]
+    },
+    {
+      "id": "edge_002",
+      "source": "agent_data_analyst",
+      "target": "tool_python_interpreter",
+      "label": "executeCode",
+      "capability": "executeCode",
+      "properties": {},
+      "risk_level": "high",
+      "blocked": false,
+      "mitigated": false,
+      "detected": false,
+      "finding_ids": [
+        "finding_004",
+        "finding_005"
+      ]
+    },
+    {
+      "id": "edge_003",
+      "source": "agent_data_analyst",
+      "target": "tool_sales_database_read",
+      "label": "invokeTool",
+      "capability": "invokeTool",
+      "properties": {},
+      "risk_level": "high",
+      "blocked": false,
+      "mitigated": false,
+      "detected": false,
+      "finding_ids": [
+        "finding_002"
+      ]
+    },
+    {
+      "id": "edge_004",
+      "source": "tool_sales_database_read",
+      "target": "asset_sales_database_read_data",
+      "label": "read",
+      "capability": "read",
+      "properties": {},
+      "risk_level": "high",
+      "blocked": false,
+      "mitigated": false,
+      "detected": false,
+      "finding_ids": [
+        "finding_002"
+      ]
+    },
+    {
+      "id": "edge_005",
+      "source": "input_user_analysis_request",
+      "target": "agent_request_intake",
+      "label": "receiveInstruction",
+      "capability": "receiveInstruction",
+      "properties": {},
+      "risk_level": "high",
+      "blocked": false,
+      "mitigated": false,
+      "detected": false,
+      "finding_ids": [
+        "finding_002",
+        "finding_005",
+        "finding_007"
+      ]
+    },
+    {
+      "id": "edge_006",
+      "source": "agent_request_intake",
+      "target": "agent_data_analyst",
+      "label": "delegateTo",
+      "capability": "delegateTo",
+      "properties": {
+        "has_scoped_delegation": false
+      },
+      "risk_level": "high",
+      "blocked": false,
+      "mitigated": false,
+      "detected": false,
+      "finding_ids": [
+        "finding_002",
+        "finding_005",
+        "finding_008"
+      ]
+    }
+  ]
+}

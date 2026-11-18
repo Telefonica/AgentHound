@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
+  Align,
   ButtonSecondary,
   DoubleField,
   FileUpload,
@@ -12,7 +13,7 @@ import {
   skinVars,
 } from "@telefonica/mistica";
 import FileBox from "@/components/ui/FileBox";
-import SectionBlock from "@/components/threat-model/SectionBlock";
+import StepSection from "@/components/threat-model/StepSection";
 import { PROVIDERS, YAML_COUNT } from "@/lib/threatModelData";
 
 /**
@@ -60,7 +61,12 @@ function YamlUploadField({ title, description, onFiles }: YamlUploadFieldProps) 
     <FileUpload
       accept=".yaml,.yml"
       withDropZone
-      asset={<IconExportRegular size={24} color={skinVars.colors.brand} />}
+      // The dropzone centres its text but leaves the asset at the start; Align puts the icon over it.
+      asset={
+        <Align x="center">
+          <IconExportRegular size={24} color={skinVars.colors.brand} />
+        </Align>
+      }
       title={title}
       description={description}
       renderButton={({ onPress, small, disabled }) => (
@@ -127,11 +133,16 @@ function ConfigurationStep({
     onFilesChange(active);
   }, [activeKeys, filesByField, onFilesChange]);
 
+  const nameInvalid = (showValidation || touched) && !name.trim();
   const showFilesError = showValidation && uploadFields.every((f) => (filesByField[f.key] ?? []).length === 0);
 
+  // The step renders straight onto the wizard's container (the screen wraps the
+  // stepper and this content in a single Boxed), so there are no inner boxes.
+  // The header and the 32 gap to the content come from StepSection; the fields
+  // and the upload zones are 32 apart.
   return (
-    <Stack space={24}>
-      <SectionBlock title={t("heading")} subtitle={t("subtitle")}>
+    <StepSection title={t("heading")} description={t("subtitle")}>
+      <Stack space={32}>
         <DoubleField layout="50/50" fullWidth>
           <TextField
             name="threat-model-name"
@@ -140,7 +151,8 @@ function ConfigurationStep({
             value={name}
             onChangeValue={onNameChange}
             onBlur={() => setTouched(true)}
-            error={(showValidation || touched) && !name.trim()}
+            error={nameInvalid}
+            helperText={nameInvalid ? t("nameRequired") : undefined}
             fullWidth
           />
           <Select
@@ -152,9 +164,7 @@ function ConfigurationStep({
             fullWidth
           />
         </DoubleField>
-      </SectionBlock>
 
-      <SectionBlock>
         <Stack space={12}>
           <div style={{ display: "flex", gap: 24, alignItems: "stretch" }}>
             {uploadFields.map((field) => {
@@ -188,8 +198,8 @@ function ConfigurationStep({
             </Text1>
           )}
         </Stack>
-      </SectionBlock>
-    </Stack>
+      </Stack>
+    </StepSection>
   );
 }
 

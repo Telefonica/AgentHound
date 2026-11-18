@@ -7,6 +7,7 @@ import {
   BackgroundVariant,
   ControlButton,
   Controls,
+  MiniMap,
   Panel,
   ReactFlow,
   ReactFlowProvider,
@@ -15,14 +16,16 @@ import {
   useEdgesState,
   useNodesState,
   useReactFlow,
+  useStore,
+  type Node,
 } from "@xyflow/react";
 import { toPng } from "html-to-image";
-import { applyAlpha } from "@telefonica/mistica";
-import type { Attack, ControlInfo, GraphEdge, GraphNode, NodeType } from "@/types/ThreatModel";
+import { Spinner, Tag, applyAlpha } from "@telefonica/mistica";
+import type { Attack, ControlInfo, Finding, GraphEdge, GraphNode, NodeType } from "@/types/ThreatModel";
 import { cyber, getSeverityPath, NODE_STYLE, useIsDarkMode, type PathSeverity } from "@/components/threat-model/graph/cyberGraphTheme";
-import { GLYPH, nodeTypes } from "@/components/threat-model/graph/nodeTypes";
+import { accentFor, GLYPH, nodeTypes } from "@/components/threat-model/graph/nodeTypes";
 import { edgeTypes, SeverityPathContext } from "@/components/threat-model/graph/edgeTypes";
-import { buildGraph, type CyberNode } from "@/components/threat-model/graph/toReactFlow";
+import { buildGraph, playbackFrame, primaryRouteId, type CyberNode, type FindingRoute } from "@/components/threat-model/graph/toReactFlow";
 import { dagreLayout } from "@/components/threat-model/graph/dagreLayout";
 
 /** Imperative handle so the parent (which owns the node-detail Drawer's open
@@ -37,6 +40,7 @@ export interface CyberGraphProps {
   nodes: GraphNode[];
   edges: GraphEdge[];
   attacks: Attack[];
+  findings?: Finding[];
   /** Analysis name, shown only in fullscreen: the page heading that normally
    * identifies the test is not visible once the canvas takes over the screen. */
   name?: string;
@@ -51,10 +55,20 @@ export interface CyberGraphProps {
   /** Whether the Proposed Solution tab has data; toggling into it while false
    * leaves fullscreen so the "unavailable" notice above the canvas is visible. */
   solutionAvailable?: boolean;
+  highlight?: GraphHighlight | null;
+  onClearHighlight?: () => void;
+  isolated?: boolean;
+  onToggleIsolated?: () => void;
+  isolating?: boolean;
+  isolateFailed?: boolean;
+  /** Label of the finding whose subgraph is loading while the previous one stays on screen. */
+  pendingRoute?: string | null;
   labels: {
     playAttack: string;
+    playRoute: (label: string) => string;
     stop: string;
     fit: string;
+    minimap: string;
     fullscreen: string;
     exitFullscreen: string;
     viewFindings: string;
@@ -66,19 +80,66 @@ export interface CyberGraphProps {
     legendPathSeverity: string;
     legendPrimaryRoute: string;
     legendCritical: string;
+    legendCriticalOnly: string;
     legendHigh: string;
     legendMedium: string;
     legendLow: string;
     legendInfo: string;
+    legendNodeFindings: string;
+    legendNodeFinding: string;
+    legendNodeFindingSample: string;
+    legendNodeFindingCountSample: string;
     legendNodeTypes: string;
     nodeTypeLabel: Record<Exclude<NodeType, "control">, string>;
     recommendedControls: string;
     /** Per-effect tag shown next to each control in the padlock tooltip. */
     controlEffect: { total: string; partial: string };
+    highlightedRoute: string;
+    playingRoute: string;
+    nextRoute: (label: string) => string;
+    clearHighlight: string;
+    isolateRoute: string;
+    isolatingRoute: string;
+    showInContext: string;
+    isolatedRoute: string;
+    retryIsolate: string;
+    loadingIsolatedRoute: (label: string) => string;
+    isolateError: string;
   };
 }
 
-const CANVAS_H = 540;
+export interface GraphHighlight extends FindingRoute {
+  label: string;
+  summary: string;
+}
+
+type PlayedRoute = FindingRoute & { label: string; summary?: string };
+
+// Grows with tall screens: large dagre layouts are bounded by height.
+const CANVAS_H = "clamp(540px, 70vh, 820px)";
+const NO_FINDINGS: Finding[] = [];
+const LEGEND_SAMPLE_ZOOM = 0.65;
+const MIN_ZOOM = 0.25;
+const MAX_ZOOM = 2.5;
+// Fitting ignores the zoom floor, otherwise large graphs never fit whole.
+const FIT_OPTIONS = { padding: 0.08, minZoom: 0 };
+const ROUTE_FIT_OPTIONS = { padding: 0.3, minZoom: 0, maxZoom: 1.2 };
+const fitDuration = () => (window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 400);
+const MINIMAP_MIN_NODES = 15;
+const MINIMAP_WIDTH = 200;
+const MINIMAP_HEIGHT = 150;
+const MINIMAP_MARGIN = 15;
+const MINIMAP_BORDER = 1;
+const MINIMAP_STYLE = { width: MINIMAP_WIDTH, height: MINIMAP_HEIGHT, margin: MINIMAP_MARGIN };
+const ROUTE_PANEL_GAP = 12;
+const ROUTE_PANEL_MIN_WIDTH = 440;
+const MINIMAP_CLEARANCE = MINIMAP_MARGIN + MINIMAP_WIDTH + 2 * MINIMAP_BORDER + ROUTE_PANEL_GAP;
+const MINIMAP_MIN_CANVAS_WIDTH = 2 * MINIMAP_CLEARANCE + ROUTE_PANEL_MIN_WIDTH;
+const ROUTE_PANEL_BESIDE_MINIMAP = { maxWidth: `calc(100% - ${2 * MINIMAP_CLEARANCE}px)` };
+const minimapNodeColor = (n: Node) => accentFor((n as CyberNode).data).accent;
+const minimapNodeClassName = (n: Node) => (n.className === "ch-dim" ? "ch-dim" : "");
+const TOOLBAR_CLEARANCE = 56;
+const TITLE_GAP = 12;
 
 // Safari still exposes the Fullscreen API under the webkit prefix, so fall back to
 // the prefixed members when the standard ones are absent.
@@ -98,14 +159,14 @@ function exitFullscreen() {
 }
 
 const Flow = forwardRef<CyberGraphHandle, CyberGraphProps>(function Flow(
-  { solved, nodes, edges, attacks, name, nodeControls, edgeControls, onNodeClick, onToggleView, solutionAvailable, labels },
+  { solved, nodes, edges, attacks, findings = NO_FINDINGS, name, nodeControls, edgeControls, onNodeClick, onToggleView, solutionAvailable, highlight, onClearHighlight, isolated = false, onToggleIsolated, isolating = false, isolateFailed = false, pendingRoute = null, labels },
   ref,
 ) {
   const isDark = useIsDarkMode();
   const severityPath = useMemo(() => getSeverityPath(isDark), [isDark]);
   const built = useMemo(
-    () => buildGraph(nodes, edges, attacks, solved, nodeControls, edgeControls, labels.recommendedControls, labels.controlEffect),
-    [nodes, edges, attacks, solved, nodeControls, edgeControls, labels.recommendedControls, labels.controlEffect],
+    () => buildGraph(nodes, edges, attacks, solved, nodeControls, edgeControls, labels.recommendedControls, labels.controlEffect, findings),
+    [nodes, edges, attacks, solved, nodeControls, edgeControls, labels.recommendedControls, labels.controlEffect, findings],
   );
 
   // Node types actually present in the graph, in reading order, for the legend.
@@ -131,8 +192,10 @@ const Flow = forwardRef<CyberGraphHandle, CyberGraphProps>(function Flow(
       // "neutralized" (safe by an upstream cut) and "neutral" both read as safe.
       else if (variant === "neutralized" || variant === "neutral") hasSafe = true;
     });
-    return { severities, hasPrimaryRoute, hasBlocked, hasMitigated, hasSafe };
-  }, [built.edges]);
+    const hasNodeFinding = built.nodes.some((n) => n.data.findingMark);
+    const hasPathRows = hasPrimaryRoute || severities.size > 0 || hasSafe;
+    return { severities, hasPrimaryRoute, hasBlocked, hasMitigated, hasSafe, hasPathRows, hasNodeFinding };
+  }, [built.edges, built.nodes]);
 
   // Refine node positions with a dagre `layered` layout (React Flow's official
   // dagre approach): dagre reorders nodes within their type-column to minimise
@@ -151,9 +214,20 @@ const Flow = forwardRef<CyberGraphHandle, CyberGraphProps>(function Flow(
 
   const [rfNodes, setRfNodes, onNodesChange] = useNodesState(layoutedNodes);
   const [rfEdges, setRfEdges, onEdgesChange] = useEdgesState(built.edges);
-  const [playStep, setPlayStep] = useState<number | null>(null);
+  const [playback, setPlayback] = useState<{ route: PlayedRoute; step: number; run: number } | null>(null);
+  const playRuns = useRef(0);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   const { getNodes, fitView } = useReactFlow();
+
+  // Zoom at which the whole graph fits; the floor drops to it so wheel zoom
+  // does not snap back past a fit on large graphs. It uses the route padding,
+  // the larger one, so a route's fit never lands below it either.
+  const fitZoom = useStore((s) => {
+    if (!s.width || !s.height || s.nodeLookup.size === 0) return MIN_ZOOM;
+    const bounds = getNodesBounds([...s.nodeLookup.keys()], { nodeLookup: s.nodeLookup });
+    return getViewportForBounds(bounds, s.width, s.height, 0, MAX_ZOOM, ROUTE_FIT_OPTIONS.padding).zoom;
+  });
+  const minZoom = Math.min(MIN_ZOOM, fitZoom);
 
   // Native Fullscreen API on the canvas wrapper — this covers the whole
   // screen (including the app sidebar), unlike a CSS-only overlay.
@@ -179,6 +253,22 @@ const Flow = forwardRef<CyberGraphHandle, CyberGraphProps>(function Flow(
     },
   }), []);
 
+  // The centred title only drops below the toolbar when they would actually overlap.
+  const titleRef = useRef<HTMLDivElement>(null);
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const [titleClash, setTitleClash] = useState(false);
+  useEffect(() => {
+    const title = titleRef.current;
+    const toolbar = toolbarRef.current;
+    const canvas = canvasRef.current;
+    if (!isFullscreen || !title || !toolbar || !canvas) return;
+    const check = () =>
+      setTitleClash(title.getBoundingClientRect().right + TITLE_GAP > toolbar.getBoundingClientRect().left);
+    const observer = new ResizeObserver(check);
+    for (const el of [title, toolbar, canvas]) observer.observe(el);
+    return () => observer.disconnect();
+  }, [isFullscreen, name]);
+
   const toggleFullscreen = useCallback(() => {
     if (fullscreenElement()) {
       exitFullscreen();
@@ -196,14 +286,33 @@ const Flow = forwardRef<CyberGraphHandle, CyberGraphProps>(function Flow(
     onToggleView();
   }, [onToggleView, solved, solutionAvailable]);
 
+  const highlightNodes = useMemo(() => new Set(highlight?.nodeIds), [highlight]);
+  const highlightEdges = useMemo(() => new Set(highlight?.edgeIds), [highlight]);
+
   // Re-fit whenever the (already dagre-positioned) nodes change or fullscreen
   // is toggled. A single rAF is enough: `layoutedNodes`/`built` are derived
   // during render (see above and the reset block below), so by the time this
   // effect runs the DOM already reflects the final layout in a single commit.
   useEffect(() => {
-    const raf = requestAnimationFrame(() => fitView({ padding: 0.08, duration: 400 }));
+    const raf = requestAnimationFrame(() =>
+      highlightNodes.size > 0
+        ? fitView({ nodes: [...highlightNodes].map((id) => ({ id })), ...ROUTE_FIT_OPTIONS, duration: fitDuration() })
+        : fitView({ ...FIT_OPTIONS, duration: fitDuration() }),
+    );
     return () => cancelAnimationFrame(raf);
-  }, [layoutedNodes, isFullscreen, fitView]);
+  }, [layoutedNodes, isFullscreen, highlightNodes, fitView]);
+
+  const hasHighlight = highlight != null;
+  useEffect(() => {
+    if (!hasHighlight || !onClearHighlight) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || e.defaultPrevented) return;
+      if (document.querySelector('[aria-modal="true"]')) return;
+      onClearHighlight();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [hasHighlight, onClearHighlight]);
 
   // Reset the canvas whenever the source graph changes (e.g. Findings ↔ Solution).
   // Done during render via the "adjust state on prop change" pattern rather than
@@ -213,59 +322,80 @@ const Flow = forwardRef<CyberGraphHandle, CyberGraphProps>(function Flow(
     setPrevBuilt(built);
     setRfNodes(layoutedNodes);
     setRfEdges(built.edges);
-    setPlayStep(null);
+    setPlayback(null);
   }
 
   const stop = useCallback(() => {
     if (timer.current) clearInterval(timer.current);
     timer.current = null;
-    setPlayStep(null);
+    setPlayback(null);
   }, []);
 
   useEffect(() => () => { if (timer.current) clearInterval(timer.current); }, []);
 
+  const primaryRoute = useMemo<PlayedRoute>(
+    () => ({ nodeIds: built.attackNodeIds, edgeIds: built.attackEdgeIds, label: primaryRouteId(attacks) }),
+    [built.attackNodeIds, built.attackEdgeIds, attacks],
+  );
+
+  const playRoute: PlayedRoute = highlight ?? primaryRoute;
+
   const play = useCallback(() => {
-    if (built.attackNodeIds.length === 0) return;
+    if (playRoute.nodeIds.length === 0) return;
     if (timer.current) clearInterval(timer.current);
-    setPlayStep(0);
+    const run = ++playRuns.current;
+    setPlayback({ route: playRoute, step: 0, run });
     let i = 0;
     timer.current = setInterval(() => {
       i += 1;
-      if (i >= built.attackNodeIds.length) {
+      if (i >= playRoute.nodeIds.length) {
         if (timer.current) clearInterval(timer.current);
         timer.current = null;
-        window.setTimeout(() => setPlayStep(null), 1600);
+        window.setTimeout(() => setPlayback((p) => (p?.run === run ? null : p)), 1600);
         return;
       }
-      setPlayStep(i);
+      setPlayback((p) => (p?.run === run ? { ...p, step: i } : p));
     }, 760);
-  }, [built.attackNodeIds]);
+  }, [playRoute]);
 
-  const isPlaying = playStep !== null;
+  const isPlaying = playback !== null;
+  const frame = useMemo(
+    () => (playback ? playbackFrame(playback.route, playback.step, rfEdges) : null),
+    [playback, rfEdges],
+  );
+  const playedNodes = useMemo(() => new Set(playback?.route.nodeIds), [playback?.route]);
+  const shownRoute = playback?.route ?? highlight;
+  // A selection made mid-run only takes over once the run ends.
+  const nextRoute = playback && highlight && highlight.label !== playback.route.label ? highlight : null;
 
   // Overlay animation classes without disturbing the (draggable) base positions.
   const renderNodes = useMemo(() => {
-    if (!isPlaying) return rfNodes;
-    const step = playStep ?? 0;
-    const live = new Set(built.attackNodeIds.slice(0, step + 1));
-    const current = built.attackNodeIds[step];
+    if (!frame) {
+      if (!highlight || isolated) return rfNodes;
+      return rfNodes.map((n) => ({ ...n, className: highlightNodes.has(n.id) ? "ch-hl" : "ch-dim" }));
+    }
     return rfNodes.map((n) => {
-      const onPath = built.attackNodeIds.includes(n.id);
-      const className = n.id === current ? "ch-current" : live.has(n.id) ? "ch-live" : onPath ? "" : "ch-dim";
+      const className = n.id === frame.currentNode ? "ch-current" : frame.liveNodes.has(n.id) ? "ch-live" : playedNodes.has(n.id) ? "" : "ch-dim";
       return { ...n, className };
     });
-  }, [isPlaying, playStep, rfNodes, built.attackNodeIds]);
+  }, [frame, playedNodes, rfNodes, highlight, isolated, highlightNodes]);
 
   const renderEdges = useMemo(() => {
-    if (!isPlaying) return rfEdges;
-    const step = playStep ?? 0;
-    const live = new Set(built.attackEdgeIds.slice(0, step));
-    const current = built.attackEdgeIds[step - 1];
+    if (!frame) {
+      // A single-node finding has no hops, yet every edge around it must fade.
+      if (!highlight || isolated) return rfEdges;
+      return rfEdges.map((e) => {
+        const lit = highlightEdges.has(e.id);
+        return lit
+          ? { ...e, className: "ch-edge-hl", zIndex: 5 }
+          : { ...e, className: "ch-dim", data: e.data && { ...e.data, dimmed: true } };
+      });
+    }
     return rfEdges.map((e) => {
-      const className = e.id === current ? "ch-edge-current" : live.has(e.id) ? "ch-edge-live" : "ch-dim";
+      const className = frame.currentEdges.has(e.id) ? "ch-edge-current" : frame.liveEdges.has(e.id) ? "ch-edge-live" : "ch-dim";
       return { ...e, className };
     });
-  }, [isPlaying, playStep, rfEdges, built.attackEdgeIds]);
+  }, [frame, rfEdges, highlight, isolated, highlightEdges]);
 
   const download = useCallback(() => {
     // Scope the DOM lookups to this graph's own wrapper so a second graph elsewhere
@@ -276,8 +406,8 @@ const Flow = forwardRef<CyberGraphHandle, CyberGraphProps>(function Flow(
     const bounds = getNodesBounds(getNodes());
     const w = 1800;
     const h = 1000;
-    const vp = getViewportForBounds(bounds, w, h, 0.4, 2.5, 0.12);
-    // `cyber.bg` is a `var(--colorBackground)` reference — html-to-image needs a
+    const vp = getViewportForBounds(bounds, w, h, 0, MAX_ZOOM, 0.12);
+    // `cyber.bg` is a `var(--colorBackgroundAlternative)` reference — html-to-image needs a
     // resolved literal for its rasterised backgroundColor, so read the canvas
     // wrapper's actual computed (theme-resolved) background instead.
     const resolvedBg = getComputedStyle(canvas).backgroundColor;
@@ -294,22 +424,37 @@ const Flow = forwardRef<CyberGraphHandle, CyberGraphProps>(function Flow(
     });
   }, [getNodes]);
 
-  const canPlay = !solved && built.attackNodeIds.length > 0;
+  const canPlay = !solved && !pendingRoute && playRoute.nodeIds.length > 0;
+  const canvasFitsMinimap = useStore((s) => s.width >= MINIMAP_MIN_CANVAS_WIDTH);
+  const showMinimap = canvasFitsMinimap && built.nodes.length >= MINIMAP_MIN_NODES;
 
   return (
     <div
       ref={canvasRef}
       data-ch-canvas
+      data-ch-pending={pendingRoute ? "" : undefined}
+      aria-busy={pendingRoute ? true : undefined}
       style={{
         height: isFullscreen ? "100vh" : CANVAS_H,
         width: "100%",
         background: cyber.bg,
+        // `laneBorder` is Mistica's `border` token. Fullscreen has no frame to draw.
+        border: isFullscreen ? "none" : `1px solid ${cyber.laneBorder}`,
+        boxSizing: "border-box",
         borderRadius: isFullscreen ? 0 : 16,
         overflow: "hidden",
         position: "relative",
       }}
     >
       <style>{CYBER_CSS}</style>
+      {pendingRoute && (
+        <div style={pendingOverlay}>
+          <div style={pendingBox} data-testid="pending-route">
+            <Spinner size={18} color={cyber.textPrimary} aria-hidden />
+            {labels.loadingIsolatedRoute(pendingRoute)}
+          </div>
+        </div>
+      )}
       <SeverityPathContext.Provider value={severityPath}>
       <ReactFlow
         nodes={renderNodes}
@@ -330,9 +475,9 @@ const Flow = forwardRef<CyberGraphHandle, CyberGraphProps>(function Flow(
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         fitView
-        fitViewOptions={{ padding: 0.08 }}
-        minZoom={0.25}
-        maxZoom={2.5}
+        fitViewOptions={FIT_OPTIONS}
+        minZoom={minZoom}
+        maxZoom={MAX_ZOOM}
         nodesConnectable={false}
         elementsSelectable
         proOptions={{ hideAttribution: true }}
@@ -352,22 +497,47 @@ const Flow = forwardRef<CyberGraphHandle, CyberGraphProps>(function Flow(
           </ControlButton>
         </Controls>
 
+        {showMinimap && (
+          <MiniMap
+            pannable
+            zoomable
+            ariaLabel={labels.minimap}
+            className="ch-minimap"
+            style={MINIMAP_STYLE}
+            bgColor={cyber.surface}
+            maskColor={cyber.overlay}
+            maskStrokeColor={cyber.gridStrong}
+            maskStrokeWidth={1}
+            nodeColor={minimapNodeColor}
+            nodeClassName={minimapNodeClassName}
+            nodeStrokeWidth={0}
+            nodeBorderRadius={6}
+          />
+        )}
+
         {isFullscreen && name && (
-          <Panel position="top-center">
-            <div style={fullscreenTitleBox} title={name}>
+          <Panel position="top-center" style={{ marginTop: titleClash ? TOOLBAR_CLEARANCE : undefined, transition: "margin-top .2s ease" }}>
+            <div ref={titleRef} style={fullscreenTitleBox} title={name} data-testid="fullscreen-title">
               {name}
             </div>
           </Panel>
         )}
 
         <Panel position="top-right">
-          <div style={{ display: "flex", gap: 8 }}>
+          <div ref={toolbarRef} style={{ display: "flex", gap: 8 }} data-testid="graph-toolbar">
             {canPlay && (
               isPlaying ? (
                 <ToolbarButton onClick={stop} label={labels.stop} accent={cyber.danger} glyph="◼" />
               ) : (
-                <ToolbarButton onClick={play} label={labels.playAttack} accent={cyber.danger} glyph="▶" />
+                <ToolbarButton onClick={play} label={highlight ? labels.playRoute(highlight.label) : labels.playAttack} accent={cyber.danger} glyph="▶" />
               )
+            )}
+            {!solved && highlight && onToggleIsolated && (
+              <ToolbarButton
+                onClick={onToggleIsolated}
+                label={isolated ? labels.showInContext : isolateFailed ? labels.retryIsolate : isolating ? labels.isolatingRoute : labels.isolateRoute}
+                glyph={isolated ? "⊞" : isolateFailed ? "↻" : "⊡"}
+              />
             )}
             {isFullscreen && onToggleView && (
               <ToolbarButton
@@ -376,10 +546,31 @@ const Flow = forwardRef<CyberGraphHandle, CyberGraphProps>(function Flow(
                 glyph="⇄"
               />
             )}
-            <ToolbarButton onClick={() => fitView({ padding: 0.08, duration: 400 })} label={labels.fit} glyph="⤢" />
+            <ToolbarButton onClick={() => fitView({ ...FIT_OPTIONS, duration: fitDuration() })} label={labels.fit} glyph="⤢" />
             <ToolbarButton onClick={download} label={labels.download} glyph="↓" />
           </div>
         </Panel>
+
+        {shownRoute && (
+          <Panel position="bottom-center" style={showMinimap ? ROUTE_PANEL_BESIDE_MINIMAP : undefined}>
+            <div style={highlightBox} role="status">
+              <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+                <span style={legendHeading}>{isPlaying ? labels.playingRoute : isolated ? labels.isolatedRoute : labels.highlightedRoute}</span>
+                <span style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                  <span style={highlightChip}>{shownRoute.label}</span>
+                  {shownRoute.summary && (
+                    <span style={highlightSummary} title={shownRoute.summary}>{shownRoute.summary}</span>
+                  )}
+                </span>
+                {nextRoute && <span style={highlightSummary}>{labels.nextRoute(nextRoute.label)}</span>}
+                {isolateFailed && <span style={{ ...highlightSummary, color: cyber.danger }}>{labels.isolateError}</span>}
+              </div>
+              {!isPlaying && onClearHighlight && (
+                <ToolbarButton onClick={onClearHighlight} label={labels.clearHighlight} glyph="✕" />
+              )}
+            </div>
+          </Panel>
+        )}
 
         <Panel position="top-left">
           <div style={legendBox}>
@@ -391,13 +582,15 @@ const Flow = forwardRef<CyberGraphHandle, CyberGraphProps>(function Flow(
               </>
             ) : (
               <>
-                {(legendState.hasPrimaryRoute || legendState.severities.size > 0 || legendState.hasSafe) && (
+                {legendState.hasPathRows && (
                   <div style={legendHeading}>{labels.legendPathSeverity}</div>
                 )}
                 {legendState.hasPrimaryRoute && (
                   <LegendRow color={severityPath.critical.color} glowColor={severityPath.critical.glow} text={labels.legendPrimaryRoute} dashed glow />
                 )}
-                {legendState.severities.has("critical") && <LegendRow color={severityPath.critical.color} text={labels.legendCritical} />}
+                {legendState.severities.has("critical") && (
+                  <LegendRow color={severityPath.critical.color} text={legendState.hasPrimaryRoute ? labels.legendCritical : labels.legendCriticalOnly} />
+                )}
                 {legendState.severities.has("high") && <LegendRow color={severityPath.high.color} text={labels.legendHigh} />}
                 {legendState.severities.has("medium") && <LegendRow color={severityPath.medium.color} text={labels.legendMedium} />}
                 {legendState.severities.has("low") && <LegendRow color={severityPath.low.color} text={labels.legendLow} />}
@@ -405,11 +598,26 @@ const Flow = forwardRef<CyberGraphHandle, CyberGraphProps>(function Flow(
                 {legendState.hasSafe && <LegendRow color={cyber.neutral} text={labels.legendSafe} />}
               </>
             )}
+            {!solved && legendState.hasNodeFinding && (
+              <>
+                {legendState.hasPathRows && <div style={legendDivider} />}
+                <div style={legendHeading}>{labels.legendNodeFindings}</div>
+                <div data-testid="legend-node-finding" style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11, color: cyber.textSecondary }}>
+                  <span style={{ display: "inline-flex", zoom: LEGEND_SAMPLE_ZOOM }}>
+                    <Tag type="inactive" small>{labels.legendNodeFindingSample}</Tag>
+                  </span>
+                  <span style={{ display: "inline-flex", zoom: LEGEND_SAMPLE_ZOOM }}>
+                    <Tag type="inactive" small>{labels.legendNodeFindingCountSample}</Tag>
+                  </span>
+                  {labels.legendNodeFinding}
+                </div>
+              </>
+            )}
             {presentTypes.length > 0 && (
               <>
                 <div style={legendDivider} />
                 <div style={legendHeading}>{labels.legendNodeTypes}</div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, maxWidth: 208 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, maxWidth: 240 }}>
                   {presentTypes.map((t) => (
                     <NodeTypeChip key={t} type={t} label={labels.nodeTypeLabel[t]} />
                   ))}
@@ -444,6 +652,8 @@ function ToolbarButton({ onClick, label, glyph, accent }: { onClick: () => void;
         fontWeight: 600,
         cursor: "pointer",
         backdropFilter: "blur(6px)",
+        whiteSpace: "nowrap",
+        flexShrink: 0,
       }}
     >
       <span style={{ fontSize: 11 }}>{glyph}</span>
@@ -476,6 +686,51 @@ const fullscreenTitleBox: React.CSSProperties = {
   overflow: "hidden",
   textOverflow: "ellipsis",
   maxWidth: "40vw",
+};
+
+const pendingOverlay: React.CSSProperties = {
+  position: "absolute",
+  inset: 0,
+  zIndex: 6,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  pointerEvents: "none",
+};
+
+const pendingBox: React.CSSProperties = {
+  ...fullscreenTitleBox,
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+  fontSize: 14,
+};
+
+const highlightBox: React.CSSProperties = {
+  ...legendBox,
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 16,
+  maxWidth: "min(720px, 80vw)",
+};
+
+const highlightChip: React.CSSProperties = {
+  padding: "1px 7px",
+  borderRadius: 999,
+  border: `1px solid ${cyber.textPrimary}`,
+  color: cyber.textPrimary,
+  fontSize: 11,
+  fontWeight: 700,
+  whiteSpace: "nowrap",
+  fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+};
+
+const highlightSummary: React.CSSProperties = {
+  fontSize: 12,
+  color: cyber.textSecondary,
+  whiteSpace: "nowrap",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
 };
 
 const legendHeading: React.CSSProperties = {
@@ -570,43 +825,22 @@ const CYBER_CSS = `
 .react-flow__edge.ch-edge-flow path.react-flow__edge-path,
 .react-flow__edge-path.ch-edge-flow { animation: chDash .6s linear infinite; }
 @keyframes chDash { to { stroke-dashoffset: -28; } }
-.react-flow__node.ch-dim, .react-flow__edge.ch-dim { opacity: .22; }
+.react-flow__node.ch-dim, .react-flow__edge.ch-dim, .react-flow__minimap-node.ch-dim { opacity: .22; }
+.react-flow__viewport { transition: opacity .2s ease; }
+[data-ch-pending] .react-flow__viewport, [data-ch-pending] .react-flow__panel.bottom.center { opacity: .3; }
 .react-flow__node.ch-current .ch-node { transform: scale(1.09); box-shadow: 0 0 0 2px ${cyber.danger}, 0 0 34px 7px ${cyber.dangerGlow} !important; }
 .react-flow__node.ch-live .ch-node { box-shadow: 0 0 0 1.5px ${cyber.danger}, 0 0 20px 2px ${cyber.dangerGlow} !important; }
 .react-flow__edge.ch-edge-current path.react-flow__edge-path { stroke-width: 3.4 !important; filter: drop-shadow(0 0 6px ${cyber.danger}); }
 .react-flow__edge.ch-edge-live path.react-flow__edge-path { stroke-width: 2.8 !important; }
+.react-flow__node.ch-hl .ch-node { box-shadow: 0 0 0 2px ${cyber.textPrimary} !important; }
+.react-flow__edge.ch-edge-hl path.react-flow__edge-path { stroke-width: 3.6 !important; opacity: 1 !important; }
 .ch-controls button { background: ${cyber.surface}; border-bottom: 1px solid ${cyber.laneBorder}; color: ${cyber.textPrimary}; }
 .ch-controls button:hover { background: ${cyber.surfaceHover}; }
 .ch-controls button svg { fill: ${cyber.textPrimary}; }
+.ch-minimap { box-sizing: content-box; border: ${MINIMAP_BORDER}px solid ${cyber.laneBorder}; border-radius: 8px; overflow: hidden; }
 
-/* ---- agent "reactor core" hero node -------------------------------------- */
-@property --ch-angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+/* ---- agent hero node ------------------------------------------------------ */
 .ch-reactor:hover { transform: translateY(-1px); }
-/* breathing outer halo (box-shadow spreads beyond the card) */
-.ch-reactor-halo {
-  position: absolute; inset: 0; pointer-events: none; z-index: 0;
-  animation: chReactorHalo 2.6s ease-in-out infinite;
-}
-@keyframes chReactorHalo {
-  0%, 100% { box-shadow: 0 0 16px 1px var(--ch-glow); }
-  50%      { box-shadow: 0 0 32px 7px var(--ch-glow); }
-}
-/* rotating conic-gradient border, masked to a 2px frame */
-.ch-reactor-ring {
-  position: absolute; inset: 0; pointer-events: none; z-index: 0; padding: 2px;
-  background: conic-gradient(from var(--ch-angle),
-    transparent 0deg, var(--ch-accent) 70deg, #ffffff 118deg,
-    var(--ch-accent) 166deg, transparent 250deg, transparent 360deg);
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-          mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-          mask-composite: exclude;
-  animation: chReactorSpin 4.2s linear infinite;
-}
-@keyframes chReactorSpin { to { --ch-angle: 360deg; } }
-@media (prefers-reduced-motion: reduce) {
-  .ch-reactor-ring, .ch-reactor-halo { animation: none; }
-}
 
 /* ---- padlock tooltip (recommended controls) ------------------------------ */
 /* raise the hovered node/label so its tooltip is not covered by later ones */

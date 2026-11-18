@@ -5,6 +5,11 @@
 # "sendExternal"); they are derived from the target node's properties.
 #
 # Each entry documents the verb and the node kinds it typically connects.
+# `evaluated_by` lists the rules whose logic checks for the verb. An
+# empty list means the verb is vocabulary only: it is accepted on edges and
+# shown in the graph, but no rule fires because of it. Kept in sync with the
+# rule modules by tests/test_capability_catalog.py.
+#
 # Organized into 9 phases of the agent cognitive cycle:
 # perception → understanding → reasoning → transformation →
 # execution → communication → memory → control → monitoring
@@ -16,31 +21,37 @@ capabilities:
     description: An input delivers instructions/content to an agent.
     typical_source: input
     typical_target: agent
+    evaluated_by: []
 
   receiveEvent:
     description: An input delivers an event or trigger signal that initiates the agent flow.
     typical_source: input
     typical_target: agent
+    evaluated_by: []
 
   read:
     description: Read data from a data asset or tool.
     typical_source: agent
     typical_target: data_asset
+    evaluated_by: [FH-001, FH-002, FH-004, FH-013, FH-025, FH-034]
 
   search:
     description: Search/query over a data asset (a refinement of read).
     typical_source: agent
     typical_target: data_asset
+    evaluated_by: []
 
   fetchWeb:
     description: Retrieve external web/network content. Primary vector for indirect prompt injection.
     typical_source: agent
     typical_target: data_asset
+    evaluated_by: [FH-006, FH-008]
 
   observeState:
     description: Query the current state of a system, process or resource without modifying it.
     typical_source: agent
     typical_target: tool
+    evaluated_by: []
 
   # ── 2. Understanding / interpretation ──────────────────────────────────────
 
@@ -48,26 +59,31 @@ capabilities:
     description: Extract structured information from content (a refinement of read).
     typical_source: agent
     typical_target: data_asset
+    evaluated_by: []
 
   classify:
     description: Assign a category, label, priority or type to an element.
     typical_source: agent
     typical_target: data_asset
+    evaluated_by: []
 
   summarize:
     description: Reduce information while preserving what is essential.
     typical_source: agent
     typical_target: data_asset
+    evaluated_by: []
 
   interpretIntent:
     description: Infer what a user or system wants to achieve from an instruction.
     typical_source: agent
     typical_target: input
+    evaluated_by: [FH-015, FH-033]
 
   validate:
     description: Check whether something meets rules, format or conditions.
     typical_source: agent
     typical_target: data_asset
+    evaluated_by: []
 
   # ── 3. Reasoning / decision ─────────────────────────────────────────────────
 
@@ -75,26 +91,31 @@ capabilities:
     description: Decompose an objective into an executable sequence of steps.
     typical_source: agent
     typical_target: agent
+    evaluated_by: []
 
   decide:
     description: Choose between alternatives according to criteria.
     typical_source: agent
     typical_target: agent
+    evaluated_by: []
 
   infer:
     description: Deduce information not explicitly present from available data.
     typical_source: agent
     typical_target: agent
+    evaluated_by: []
 
   prioritize:
     description: Order actions or items by importance.
     typical_source: agent
     typical_target: agent
+    evaluated_by: []
 
   resolveConflict:
     description: Handle inconsistencies between sources, constraints or instructions.
     typical_source: agent
     typical_target: agent
+    evaluated_by: []
 
   # ── 4. Information transformation ───────────────────────────────────────────
 
@@ -102,31 +123,37 @@ capabilities:
     description: Modify form, tone, structure or style of content while preserving meaning.
     typical_source: agent
     typical_target: data_asset
+    evaluated_by: []
 
   translate:
     description: Convert content between human languages or between formal languages (e.g. NL→SQL).
     typical_source: agent
     typical_target: data_asset
+    evaluated_by: []
 
   convertFormat:
     description: Transform data from one format to another without changing its semantics.
     typical_source: agent
     typical_target: data_asset
+    evaluated_by: []
 
   normalizeData:
     description: Homogenize structures, units or values to a canonical form.
     typical_source: agent
     typical_target: data_asset
+    evaluated_by: []
 
   enrichData:
     description: Add additional information by consulting other sources.
     typical_source: agent
     typical_target: data_asset
+    evaluated_by: []
 
   generateContent:
     description: Create new content (textual, structured or code) where none existed before.
     typical_source: agent
     typical_target: data_asset
+    evaluated_by: []
 
   # ── 5. Execution / action ───────────────────────────────────────────────────
 
@@ -134,41 +161,49 @@ capabilities:
     description: Execute code / shell commands.
     typical_source: agent
     typical_target: tool
+    evaluated_by: [FH-010, FH-016]
 
   invokeTool:
     description: Invoke a tool (wraps a concrete operation).
     typical_source: agent
     typical_target: tool
+    evaluated_by: [FH-008, FH-011, FH-025]
 
   send:
     description: Send data to an output/sink.
     typical_source: agent
     typical_target: output
+    evaluated_by: [FH-001, FH-003, FH-004, FH-013, FH-015]
 
   createResource:
     description: Create a new resource (additive side effect).
     typical_source: agent
     typical_target: output
+    evaluated_by: []
 
   modifyResource:
     description: Modify an existing resource (mutating side effect).
     typical_source: agent
     typical_target: output
+    evaluated_by: [FH-011]
 
   deleteResource:
     description: Delete a resource (destructive, often irreversible).
     typical_source: agent
     typical_target: output
+    evaluated_by: [FH-011, FH-015, FH-032]
 
   moveResource:
     description: Change the location of or duplicate data (e.g. copy to public storage, export file).
     typical_source: agent
     typical_target: data_asset
+    evaluated_by: [FH-012]
 
   deployRelease:
     description: Make a resource or change available in a production environment.
     typical_source: agent
     typical_target: tool
+    evaluated_by: [FH-012, FH-015, FH-032]
 
   # ── 6. Communication ────────────────────────────────────────────────────────
 
@@ -176,31 +211,37 @@ capabilities:
     description: Return a reply, explanation or result to the user who originated the request.
     typical_source: agent
     typical_target: output
+    evaluated_by: [FH-013]
 
   notify:
     description: Proactively inform a person or system of an event or result.
     typical_source: agent
     typical_target: output
+    evaluated_by: [FH-013]
 
   requestInformation:
     description: Ask a person for missing data, clarification or approval.
     typical_source: agent
     typical_target: output
+    evaluated_by: []
 
   delegateTo:
     description: Delegate work/authority to another agent.
     typical_source: agent
     typical_target: agent
+    evaluated_by: [FH-007, FH-014, FH-023]
 
   dataFlow:
     description: Generic propagation of data between nodes.
     typical_source: agent
     typical_target: agent
+    evaluated_by: [FH-007, FH-024]
 
   escalate:
     description: Transfer a situation to a higher-level person, team or system.
     typical_source: agent
     typical_target: output
+    evaluated_by: []
 
   # ── 7. Memory and context ───────────────────────────────────────────────────
 
@@ -208,26 +249,31 @@ capabilities:
     description: Read from a memory store.
     typical_source: agent
     typical_target: memory
+    evaluated_by: [FH-009]
 
   writeMemory:
     description: Write to a memory store.
     typical_source: agent
     typical_target: memory
+    evaluated_by: [FH-009]
 
   updateContext:
     description: Maintain relevant information during a task or session (short-term memory).
     typical_source: agent
     typical_target: memory
+    evaluated_by: []
 
   forgetContext:
     description: Remove irrelevant, sensitive or expired context.
     typical_source: agent
     typical_target: memory
+    evaluated_by: []
 
   manageWorkflowState:
     description: Maintain the progress of a multi-step task or workflow.
     typical_source: agent
     typical_target: memory
+    evaluated_by: []
 
   # ── 8. Control and security ─────────────────────────────────────────────────
 
@@ -235,31 +281,37 @@ capabilities:
     description: Obtain or use credentials to access resources.
     typical_source: agent
     typical_target: tool
+    evaluated_by: []
 
   authorize:
     description: Check permissions before acting.
     typical_source: agent
     typical_target: tool
+    evaluated_by: []
 
   requestConfirmation:
     description: Request explicit approval before a sensitive action.
     typical_source: agent
     typical_target: output
+    evaluated_by: []
 
   auditLog:
     description: Record actions, decisions and outcomes for traceability.
     typical_source: agent
     typical_target: output
+    evaluated_by: []
 
   protectInformation:
     description: Apply transformations to prevent improper data exposure (redaction, encryption).
     typical_source: agent
     typical_target: data_asset
+    evaluated_by: []
 
   detectRisk:
     description: Identify dangerous, anomalous or disallowed actions before executing them.
     typical_source: agent
     typical_target: input
+    evaluated_by: []
 
   # ── 9. Monitoring and recovery ──────────────────────────────────────────────
 
@@ -267,28 +319,34 @@ capabilities:
     description: Check that an action produced the expected effect.
     typical_source: agent
     typical_target: tool
+    evaluated_by: [FH-030]
 
   handleError:
     description: Detect, interpret and respond to failures.
     typical_source: agent
     typical_target: agent
+    evaluated_by: []
 
   retry:
     description: Re-execute an action after a transient failure.
     typical_source: agent
     typical_target: tool
+    evaluated_by: [FH-031]
 
   rollback:
     description: Revert a previous action or change.
     typical_source: agent
     typical_target: tool
+    evaluated_by: []
 
   recordProgress:
     description: Maintain a persistent trace of steps performed.
     typical_source: agent
     typical_target: output
+    evaluated_by: []
 
   finalizeTask:
     description: Formally close a task with an explicit result.
     typical_source: agent
     typical_target: output
+    evaluated_by: []

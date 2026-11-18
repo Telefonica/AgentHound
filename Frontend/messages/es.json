@@ -44,7 +44,7 @@
   "overview": {
     "title": "Resumen",
     "description": "Prueba la arquitectura de tu agente de IA y detecta rutas de capacidad peligrosas antes que los atacantes.",
-    "newThreatModel": "Nueva prueba",
+    "newThreatModel": "Crear nueva prueba",
     "kpis": {
       "totalModels": "Pruebas totales",
       "critical": "Pruebas de riesgo crítico o alto",
@@ -54,6 +54,7 @@
     "listTitle": "Tus pruebas",
     "emptyTitle": "Crea tu primera prueba",
     "loadError": "No se pudieron cargar tus pruebas.",
+    "loadTestError": "No se pudo cargar esta prueba.",
     "back": "Volver al resumen",
     "delete": {
       "action": "Eliminar {name}",
@@ -77,9 +78,21 @@
     "next": "Siguiente",
     "untitled": "Nueva prueba",
     "progressLabel": "Progreso de creación de la prueba",
+    "rename": {
+      "editLabel": "Editar el nombre de la prueba",
+      "title": "Ponle nombre a tu prueba",
+      "description": "Puedes editar aquí el nombre de la prueba.",
+      "fieldLabel": "Nombre de la prueba",
+      "emptyName": "Escribe un nombre. Si lo dejas vacío, la prueba mantiene su nombre actual.",
+      "update": "Actualizar",
+      "cancel": "Cancelar",
+      "close": "Cerrar el cuadro de nombre",
+      "error": "No se ha podido guardar el nuevo nombre. La prueba mantiene el nombre anterior."
+    },
     "steps": {
       "configuration": "Configuración",
-      "inference": "Inferencia",
+      "analysis": "Análisis",
+      "capabilities": "Capacidades",
       "results": "Resultados"
     }
   },
@@ -100,15 +113,18 @@
     "fileWorkflowDesc": "Definición completa del flujo: nodos, conexiones, herramientas y salidas.",
     "chooseFileButton": "Elegir archivo",
     "filesRequired": "Sube al menos un archivo YAML para analizar.",
+    "nameRequired": "Ponle un nombre al análisis.",
     "exportHelpLink": "¿Cómo puedo exportar el archivo yaml?",
     "analyzeButton": "Analizar"
   },
   "processing": {
+    "heading": "Analizando",
     "title": "Leyendo la arquitectura del agente…",
     "subtitle": "YAML → normalización IR → grafo de capacidades",
     "progressLabel": "Progreso",
+    "elapsedTime": "Tiempo transcurrido {time}",
     "doneTitle": "Arquitectura procesada",
-    "doneDesc": "{findings} hallazgos detectados · {critical} críticos · puntuación máxima {maxScore} · {agents} agentes",
+    "doneDescription": "El grafo de capacidades está listo para revisarlo.",
     "errorTitle": "El procesado ha fallado"
   },
   "inference": {
@@ -140,6 +156,9 @@
     "editAgentDesc": "Arrastra capacidades del catálogo sobre el agente, o quita las que no apliquen. También puedes renombrar el agente.",
     "catalogTitle": "Catálogo de capacidades",
     "catalogHint": "Arrastra una capacidad sobre el agente, o haz clic para añadirla.",
+    "uncheckedVerbs": "Ninguna regla mira estos verbos",
+    "uncheckedVerbNote": "Ninguna regla mira el verbo \"{capability}\": la conexión cuenta para las rutas como cualquier otra, pero el verbo no activa ninguna regla por sí mismo.",
+    "checkedBy": "{count, plural, one {Lo comprueba} other {Lo comprueban}} {rules}",
     "detectedCapabilities": "Capacidades detectadas",
     "addingCapability": "Añadiendo \"{capability}\" a {row}",
     "dropHint": "Aún no hay capacidades. Arrastra una aquí desde el catálogo.",
@@ -156,29 +175,36 @@
         "totalTests": "Pruebas analizadas",
         "totalFindings": "Hallazgos totales",
         "totalCritical": "Hallazgos críticos",
-        "criticalRate": "Pruebas con críticos",
+        "criticalRate": "Pruebas críticas",
         "avgMaxScore": "Puntuación máx. media"
+      },
+      "kpiInfoLabel": "Más información sobre {name}",
+      "kpiInfo": {
+        "criticalRate": "Porcentaje de pruebas con hallazgos críticos",
+        "avgMaxScore": "Media de la puntuación de riesgo más alta de cada prueba analizada"
       },
       "back": "Volver a resultados",
       "worstTitle": "Pruebas de mayor riesgo",
       "maxScoreLabel": "puntuación máx. {score}",
       "frameworkTitle": "Hallazgos por framework",
-      "frameworkRow": "{tests} pruebas · {findings} hallazgos"
+      "frameworkRow": "{tests, plural, one {# prueba} other {# pruebas}} · {findings, plural, one {# hallazgo} other {# hallazgos}}"
     },
     "title": "Análisis de amenazas",
-    "subtitleTemplate": "{agents} agentes · {tools} herramientas · {data} activos de datos · {findings} hallazgos · {critical} rutas de ataque críticas detectadas",
+    "subtitleTemplate": "{agents, plural, one {# agente} other {# agentes}} · {tools, plural, one {# herramienta} other {# herramientas}} · {data, plural, one {# activo de datos} other {# activos de datos}} · {findings, plural, one {# hallazgo} other {# hallazgos}} · {critical, plural, one {# ruta de ataque crítica detectada} other {# rutas de ataque críticas detectadas}}",
     "tabFindings": "Hallazgos",
     "tabProposedSolution": "Solución propuesta",
     "graphTitleFindings": "Grafo de capacidades — Rutas de ataque",
     "graphTitleSolution": "Grafo de capacidades resuelto",
     "graphDescFindings": "Rutas de ataque críticas resaltadas. Haz clic en cualquier nodo para inspeccionarlo. Los controles marcados están ausentes.",
     "graphDescSolution": "Rutas de ataque neutralizadas tras aplicar los controles. Nodos rojos resueltos a verde.",
-    "graphHint": "Haz zoom, desplaza y arrastra los nodos · haz clic en un nodo para ver sus detalles",
+    "graphHint": "Haz zoom, desplaza y arrastra los nodos · haz clic en un nodo para ver sus detalles · haz clic en un hallazgo para ver su ruta",
     "downloadSvg": "Descargar SVG",
     "downloadPng": "PNG",
     "playAttack": "Reproducir ataque",
+    "playRoute": "Reproducir {id}",
     "stopAttack": "Detener",
     "fitView": "Ajustar",
+    "minimap": "Vista general del grafo",
     "fullscreen": "Pantalla completa",
     "exitFullscreen": "Salir de pantalla completa",
     "legend": {
@@ -189,10 +215,15 @@
       "pathSeverity": "Severidad de la ruta",
       "primaryRoute": "Ruta principal {id}",
       "critical": "Otra ruta crítica",
+      "criticalOnly": "Ruta de hallazgo crítico",
       "high": "Ruta de hallazgo alto",
       "medium": "Ruta de hallazgo medio",
       "low": "Ruta de hallazgo bajo",
       "info": "Ruta de hallazgo informativo",
+      "nodeFindings": "Hallazgos en nodos",
+      "nodeFinding": "Puntuación máx. y nº de hallazgos",
+      "nodeFindingSample": "máx.",
+      "nodeFindingCountSample": "N hallazgos",
       "nodeTypes": "Tipos de nodo",
       "node": {
         "input": "Punto de entrada",
@@ -203,12 +234,68 @@
         "output": "Salida"
       }
     },
-    "solvedBanner": "Todas las rutas de ataque críticas resueltas · {count} controles activados",
+    "solvedBanner": "Todas las rutas de ataque críticas resueltas · {count, plural, one {# control activado} other {# controles activados}}",
     "primaryPath": "Ruta crítica principal",
-    "prioritizedFindings": "Hallazgos priorizados ({count})",
+    "prioritizedFindings": "Hallazgos priorizados",
+    "prioritizedFindingsCount": "{findings, plural, one {# hallazgo} other {# hallazgos}} · {groups, plural, one {# patrón} other {# patrones}}",
+    "findingGroupCount": "{count, plural, one {# hallazgo} other {# hallazgos}}",
+    "findingGroupFrom": "{title} desde {node}",
+    "findingGroupAt": "{title} en {node}",
+    "findingGroupHoldsSelection": "Contiene el hallazgo seleccionado",
+    "showAllFindingGroups": "Ver los {count} patrones",
+    "showMoreOccurrences": "Ver {count} más",
+    "showTopFindingGroups": "Ver solo los {count} primeros",
+    "showTopOccurrences": "Ver solo las {count} primeras",
+    "findingPatternsCount": "{count, plural, one {# causa} other {# causas}}",
+    "showOccurrences": "Ver las {count} ocurrencias",
+    "hideOccurrences": "Ocultar ocurrencias",
     "findingSummary": "{title} · puntuación {score}",
+    "highlightedRoute": "Ruta resaltada",
+    "nodeFindings": "{count, plural, one {# hallazgo} other {# hallazgos}} en este nodo · máx. {score}",
+    "playingRoute": "Reproduciendo ruta",
+    "nextRoute": "{id} se resaltará al terminar",
+    "clearHighlight": "Ver todo",
+    "showRouteHint": "Resalta su ruta en el grafo; vuelve a pulsar para ver el grafo completo",
+    "isolateRoute": "Aislar ruta",
+    "isolatingRoute": "Cargando ruta…",
+    "showInContext": "Ver en contexto",
+    "isolatedRoute": "Hallazgo aislado",
+    "retryIsolate": "Reintentar ruta",
+    "loadingIsolatedRoute": "Cargando {id}…",
+    "isolateError": "No se pudo cargar la ruta de este hallazgo.",
     "chokepointTitle": "Punto de control recomendado",
     "chokepointDesc": "Aplica {control} en {node} — elimina el {pct}% del riesgo (coste: {cost})",
+    "coverage": {
+      "title": "Cobertura del formato",
+      "subtitle": "{count, plural, one {# regla} other {# reglas}} que el formato de este fichero no puede comprobar del todo",
+      "intro": "Los ficheros de framework no pueden expresar todas las reglas, así que un resultado limpio aquí es menos completo que uno del formato genérico.",
+      "notExpressibleTitle": "No alcanzables desde este formato",
+      "notExpressibleDesc": "El adaptador no puede producir lo que buscan estas reglas, diga lo que diga el fichero. Describe el sistema en el formato genérico para comprobarlas.",
+      "needsDeclarationTitle": "Se comprueban al declarar una propiedad",
+      "needsDeclarationDesc": "Añádela a la entrada del nodo en el fichero y vuelve a analizar.",
+      "needsDeclarationDescDify": "Añádela al bloque data del nodo en el fichero y vuelve a analizar.",
+      "declare": "Declara {what}",
+      "requirement": "{property}: {values} {node}",
+      "on": {
+        "agent": "en el agente",
+        "input": "en la entrada",
+        "tool": "en la herramienta",
+        "data_asset": "en el activo de datos",
+        "output": "en la salida",
+        "memory": "en el nodo de memoria",
+        "control": "en el control"
+      },
+      "role": {
+        "delegate": "en el agente al que delega otro agente",
+        "reachable": "en una herramienta que ese agente pueda alcanzar",
+        "read": "en el activo de datos que lee el agente",
+        "sent_to": "en la salida a la que envía el agente",
+        "shared": "en una memoria que use más de un agente"
+      },
+      "ignoredTitle": "Ignorado en tu fichero",
+      "ignoredSuggestion": "{property} en {node} no es una propiedad conocida y se ha ignorado. ¿Querías decir {suggestion}?",
+      "ignoredOther": "{property} en {node} pertenece a otro tipo de nodo y se ha ignorado."
+    },
     "metricsTitleFindings": "Métricas de riesgo",
     "metricsTitleSolution": "Métricas post-remediación",
     "before": "Antes",
@@ -223,11 +310,19 @@
     },
     "beforeAfter": {
       "findingCount": "Hallazgos",
+      "causeCount": "Causas",
       "criticalCount": "Hallazgos críticos",
       "maxScore": "Puntuación máxima",
-      "riskReduction": "Reducción de riesgo"
+      "riskReduction": "Reducción por hallazgo",
+      "riskReductionByGroup": "Reducción por causa"
     },
     "findingsTableTitle": "Hallazgos inferidos",
+    "searchFindings": "Buscar hallazgos",
+    "searchFindingsPlaceholder": "FH-001, título, nodo…",
+    "findingsMatching": "{count} de {total, plural, one {# hallazgo} other {# hallazgos}}",
+    "filterBySeverity": "Filtrar por severidad",
+    "noFindingsMatch": "Ningún hallazgo coincide con la búsqueda",
+    "clearFilters": "Borrar búsqueda y filtros",
     "attackFindingsTitle": "Rutas de ataque",
     "hygieneTitle": "Higiene y cumplimiento",
     "tableHeaders": {
@@ -250,6 +345,7 @@
   },
   "node": {
     "properties": "Propiedades",
+    "ownFindings": "Hallazgos en este nodo",
     "attackPaths": "Rutas de ataque a través de este nodo",
     "recommendedControls": "Controles recomendados",
     "controlEffect": {
@@ -260,6 +356,7 @@
     "absent": "ausente",
     "deleteNode": "Eliminar nodo",
     "riskScore": "Puntuación de riesgo",
-    "evidence": "Evidencia"
+    "evidence": "Evidencia",
+    "showRoute": "Mostrar la ruta {id} en el grafo"
   }
 }

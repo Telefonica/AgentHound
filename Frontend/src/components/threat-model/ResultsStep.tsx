@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useId, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import {
@@ -9,6 +9,7 @@ import {
   Boxed,
   BoxedAccordion,
   BoxedAccordionItem,
+  ButtonLink,
   ButtonPrimary,
   ButtonSecondary,
   Callout,
@@ -29,18 +30,26 @@ import {
   Tag,
   Text1,
   Text2,
+  Text3,
   Text4,
   Text6,
   Timeline,
   TimelineItem,
+  Touchable,
   skinVars,
   useTheme,
 } from "@telefonica/mistica";
 import type { IconProps } from "@telefonica/mistica";
+import CoverageWarnings from "@/components/threat-model/CoverageWarnings";
+import { FindingId, FindingRoute } from "@/components/threat-model/FindingIdentity";
 import SeverityBadge from "@/components/threat-model/SeverityBadge";
+import { StepHeader } from "@/components/threat-model/StepSection";
 import InlineError from "@/components/ui/InlineError";
 import { severityAccentColor } from "@/lib/threatModelColors";
-import { formatSnakeCase } from "@/lib/format";
+import { formatSnakeCase, formatValue } from "@/lib/format";
+import { ShowMoreOccurrences, useCappedOccurrences } from "@/components/threat-model/CappedOccurrences";
+import { findingLabels, groupFindings, type FindingPattern } from "@/lib/results/findingDisplay";
+import { usePatternTitle } from "@/lib/results/usePatternTitle";
 import { SEVERITY_STYLES } from "@/lib/severity";
 import type { AnalysisResult, ChokepointRec } from "@/lib/api/adapters";
 import {
@@ -49,7 +58,7 @@ import {
   downloadMarkdownReport,
   downloadYaml,
 } from "@/lib/threatModelExport";
-import type { Finding } from "@/types/ThreatModel";
+import type { Finding, GraphNode } from "@/types/ThreatModel";
 import type { ReactElement } from "react";
 
 // The graph is a large, decorative SVG only needed once a user reaches this step of the
@@ -75,7 +84,7 @@ interface MetricRowProps {
 
 function MetricRow({ label, value, color }: MetricRowProps) {
   return (
-    <Inline space="between" alignItems="baseline">
+    <Inline space="between" alignItems="baseline" dataAttributes={{ testid: "metric-row" }}>
       <Text1 regular color={skinVars.colors.textSecondary}>{label}</Text1>
       <Text1 medium color={color}>{value}</Text1>
     </Inline>
@@ -87,27 +96,18 @@ interface BeforeAfterCardProps {
   Icon: (props: IconProps) => ReactElement;
   color: string;
   rows: { label: string; value: string | number; color?: string }[];
-  headerBadge?: { label: string; value: string | number; color: string };
 }
 
-function BeforeAfterCard({ label, Icon, color, rows, headerBadge }: BeforeAfterCardProps) {
+function BeforeAfterCard({ label, Icon, color, rows }: BeforeAfterCardProps) {
   return (
-    <Boxed>
+    <Boxed height="100%" dataAttributes={{ testid: "before-after-card" }}>
       <Box paddingX={20} paddingY={20}>
         <Stack space={16}>
-          <Inline space="between" alignItems="center">
-            <Inline space={12} alignItems="center">
-              <Circle size={32} backgroundColor={skinVars.colors.neutralLow}>
-                <Icon size={18} color={color} />
-              </Circle>
-              <Text2 medium color={color}>{label}</Text2>
-            </Inline>
-            {headerBadge && (
-              <Inline space={4} alignItems="baseline">
-                <Text2 medium color={headerBadge.color}>{headerBadge.value}</Text2>
-                <Text1 regular color={skinVars.colors.textSecondary}>{headerBadge.label}</Text1>
-              </Inline>
-            )}
+          <Inline space={12} alignItems="center">
+            <Circle size={32} backgroundColor={skinVars.colors.neutralLow}>
+              <Icon size={18} color={color} />
+            </Circle>
+            <Text3 medium color={color}>{label}</Text3>
           </Inline>
           <Divider />
           <Stack space={8}>
@@ -123,36 +123,44 @@ function BeforeAfterCard({ label, Icon, color, rows, headerBadge }: BeforeAfterC
 
 interface FindingCardProps {
   finding: Finding;
+  label: string;
+  nodesById: Map<string, Pick<GraphNode, "label">>;
   isDarkMode: boolean;
   tSeverity: (key: string) => string;
   scoreLabel: string;
+  routeHint: string;
+  selected: boolean;
+  onSelect?: (id: string) => void;
+  inPattern?: boolean;
 }
 
-function FindingCard({ finding, isDarkMode, tSeverity, scoreLabel }: FindingCardProps) {
+function FindingCard({ finding, label, nodesById, isDarkMode, tSeverity, scoreLabel, routeHint, selected, onSelect, inPattern = false }: FindingCardProps) {
   const accent = severityAccentColor(finding.severity, isDarkMode);
   const hasRefs = Boolean(
     finding.owaspAgentic?.length || finding.owaspLlm?.length || finding.mitre?.length,
   );
-  return (
+  const card = (
     <Boxed>
       <Box paddingX={20} paddingY={16}>
         <Stack space={12}>
           <Inline space="between" alignItems="center">
             <Inline space={8} alignItems="center" wrap verticalSpace={4}>
               <SeverityBadge severity={finding.severity} small>{tSeverity(finding.severity)}</SeverityBadge>
-              <Text1 medium color={skinVars.colors.textSecondary}>{finding.ruleId}</Text1>
+              <Text1 medium color={skinVars.colors.textSecondary}>{label}</Text1>
+              <FindingId id={finding.id} />
               <Tag type="inactive" small>{formatSnakeCase(finding.category)}</Tag>
             </Inline>
             <Text2 medium color={accent}>{scoreLabel}: {finding.score}</Text2>
           </Inline>
           <Stack space={4}>
-            <Text2 medium>{finding.title}</Text2>
-            {finding.desc && <Text1 regular color={skinVars.colors.textSecondary}>{finding.desc}</Text1>}
+            {!inPattern && <Text2 medium>{finding.title}</Text2>}
+            <FindingRoute path={finding.path} nodesById={nodesById} />
+            {!inPattern && finding.desc && <Text1 regular color={skinVars.colors.textSecondary}>{finding.desc}</Text1>}
             {finding.evidence && Object.keys(finding.evidence).length > 0 && (
               <Inline space={4} wrap verticalSpace={4}>
                 {Object.entries(finding.evidence).map(([key, value]) => (
                   <Tag key={key} small type="inactive">
-                    {`${formatSnakeCase(key)}: ${Array.isArray(value) ? value.join("/") : value}`}
+                    {`${formatSnakeCase(key)}: ${formatValue(value)}`}
                   </Tag>
                 ))}
               </Inline>
@@ -168,6 +176,108 @@ function FindingCard({ finding, isDarkMode, tSeverity, scoreLabel }: FindingCard
         </Stack>
       </Box>
     </Boxed>
+  );
+  if (!onSelect) return card;
+  return (
+    <Touchable
+      onPress={() => onSelect(finding.id)}
+      dataAttributes={{ testid: "finding-card" }}
+      aria-current={selected ? "true" : undefined}
+      aria-description={routeHint}
+      style={{
+        display: "block",
+        width: "100%",
+        borderRadius: skinVars.borderRadii.container,
+        outline: selected ? `2px solid ${skinVars.colors.borderSelected}` : undefined,
+        outlineOffset: 2,
+      }}
+    >
+      {card}
+    </Touchable>
+  );
+}
+
+interface FindingPatternCardProps extends Omit<FindingCardProps, "finding" | "label" | "selected" | "onSelect" | "inPattern"> {
+  pattern: FindingPattern<Finding>;
+  title: string;
+  labelById: Map<string, string>;
+  selectedFindingId: string | null;
+  onSelect: (id: string) => void;
+}
+
+function FindingPatternCard({ pattern, title, labelById, selectedFindingId, onSelect, ...cardProps }: FindingPatternCardProps) {
+  const t = useTranslations("results");
+  const contentId = useId();
+  const [expanded, setExpanded] = useState(false);
+  const [seenSelection, setSeenSelection] = useState(selectedFindingId);
+  const { visible, showAll, toggleShowAll } = useCappedOccurrences(pattern.findings, selectedFindingId);
+  const [top] = pattern.findings;
+  const count = pattern.findings.length;
+  const contains = (id: string | null) => pattern.findings.some((f) => f.id === id);
+  if (selectedFindingId !== seenSelection) {
+    setSeenSelection(selectedFindingId);
+    if (contains(selectedFindingId)) setExpanded(true);
+  }
+  const holdsSelection = !expanded && contains(selectedFindingId);
+  return (
+    <div
+      data-testid="finding-pattern"
+      style={{
+        borderRadius: skinVars.borderRadii.container,
+        outline: holdsSelection ? `2px solid ${skinVars.colors.borderSelected}` : undefined,
+        outlineOffset: 2,
+      }}
+    >
+      <Boxed>
+        <Box paddingX={20} paddingY={16}>
+          <Stack space={12}>
+            <Inline space="between" alignItems="center">
+              <Inline space={8} alignItems="center" wrap verticalSpace={4}>
+                <SeverityBadge severity={top.severity} small>{cardProps.tSeverity(top.severity)}</SeverityBadge>
+                <Text1 medium color={skinVars.colors.textSecondary}>{top.ruleId}</Text1>
+                <Tag type="inactive" small dataAttributes={{ testid: "finding-count" }}>{t("findingGroupCount", { count })}</Tag>
+                <Tag type="inactive" small>{formatSnakeCase(top.category)}</Tag>
+              </Inline>
+              <Text2 medium color={severityAccentColor(top.severity, cardProps.isDarkMode)}>{cardProps.scoreLabel}: {top.score}</Text2>
+            </Inline>
+            <Stack space={4}>
+              <Text2 medium>{title}</Text2>
+              {top.desc && <Text1 regular color={skinVars.colors.textSecondary}>{top.desc}</Text1>}
+            </Stack>
+            <Box>
+              <ButtonLink
+                small
+                bleedLeft
+                aria-expanded={expanded}
+                aria-controls={expanded ? contentId : undefined}
+                aria-description={holdsSelection ? t("findingGroupHoldsSelection") : undefined}
+                onPress={() => setExpanded((v) => !v)}
+              >
+                {expanded ? t("hideOccurrences") : t("showOccurrences", { count })}
+              </ButtonLink>
+            </Box>
+            {expanded && (
+              <Box id={contentId}>
+                <Stack space={12}>
+                  {visible.map((f) => (
+                    <FindingCard
+                      key={f.id}
+                      {...cardProps}
+                      finding={f}
+                      label={labelById.get(f.id) ?? f.ruleId}
+                      selected={f.id === selectedFindingId}
+                      onSelect={f.path.length > 0 ? onSelect : undefined}
+                      inPattern
+                    />
+                  ))}
+                  <ShowMoreOccurrences total={count} visibleCount={visible.length} showAll={showAll} onToggle={toggleShowAll} controls={contentId} />
+                </Stack>
+              </Box>
+            )}
+          </Stack>
+        </Box>
+      </Boxed>
+    </div>
   );
 }
 
@@ -189,10 +299,15 @@ function ChokepointCallout({ rec }: { rec: ChokepointRec }) {
 
 interface ResultsStepProps {
   result: AnalysisResult | null;
-  hideTitle?: boolean;
+  /**
+   * Wizard step title. When set, the header uses the shared step header (title +
+   * paragraph) and the analysis name is left to the wizard's own heading.
+   * Otherwise the analysis name is the page title.
+   */
+  stepTitle?: string;
 }
 
-function ResultsStep({ result, hideTitle = false }: ResultsStepProps) {
+function ResultsStep({ result, stepTitle }: ResultsStepProps) {
   const t = useTranslations("results");
   const tSeverity = useTranslations("overview.severity");
   const tCommon = useTranslations("common");
@@ -201,33 +316,71 @@ function ResultsStep({ result, hideTitle = false }: ResultsStepProps) {
   const solved = tab === 1;
   const view = solved ? "solution" : "findings";
 
+  const [selectedFindingId, setSelectedFindingId] = useState<string | null>(null);
+  const graphSectionRef = useRef<HTMLDivElement>(null);
+  const selectFinding = useCallback((id: string) => {
+    setSelectedFindingId((current) => (current === id ? null : id));
+    // Smooth scrolling is motion too: users who asked for less get a jump.
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    graphSectionRef.current?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "nearest" });
+  }, []);
+  const clearSelection = useCallback(() => setSelectedFindingId(null), []);
+  const labelById = useMemo(() => findingLabels(result?.findings ?? []), [result]);
+  const nodesById = useMemo(() => new Map((result?.nodes ?? []).map((n) => [n.id, n])), [result]);
+  const patternTitle = usePatternTitle(nodesById);
+  const [resolvedFindings, openFindings] = useMemo(() => {
+    const broken = new Set(result?.solution?.brokenFindingIds);
+    const all = result?.findings ?? [];
+    return [all.filter((f) => broken.has(f.id)), all.filter((f) => !broken.has(f.id))];
+  }, [result]);
+  const findingGroups = useMemo(
+    () =>
+      (["attack", "hygiene"] as const)
+        .map((cls) => {
+          const items = (result?.findings ?? []).filter((f: Finding) => f.findingClass === cls);
+          return { cls, items, patterns: groupFindings(items) };
+        })
+        .filter(({ items }) => items.length > 0),
+    [result],
+  );
+
   if (!result) {
     return <InlineError message={tCommon("error.description")} />;
   }
 
   const { counts, findings } = result;
   const sol = result.solution;
-  const findingGroups = (["attack", "hygiene"] as const)
-    .map((cls) => ({ cls, items: findings.filter((f: Finding) => f.findingClass === cls) }))
-    .filter(({ items }) => items.length > 0);
+  const cardProps = {
+    nodesById,
+    isDarkMode,
+    tSeverity,
+    scoreLabel: t("tableHeaders.score"),
+    routeHint: t("showRouteHint"),
+  };
+  const causeCount = (items: Finding[]) => new Set(items.map((f) => f.groupId)).size;
   // The Proposed Solution tab needs the live simulation; if it failed to load
   // (Phase 2 unavailable), surface a notice rather than a misleading green graph.
   const solutionUnavailable = solved && !sol;
+  const subtitle = t("subtitleTemplate", {
+    agents: counts.agents,
+    tools: counts.tools,
+    data: counts.dataAssets,
+    findings: counts.findings,
+    critical: counts.critical,
+  });
 
   return (
     <Stack space={32}>
-      <Stack space={4}>
-        {!hideTitle && <Text4 medium as="h1">{result.name || t("title")}</Text4>}
-        <Text2 regular color={skinVars.colors.textSecondary}>
-          {t("subtitleTemplate", {
-            agents: counts.agents,
-            tools: counts.tools,
-            data: counts.dataAssets,
-            findings: counts.findings,
-            critical: counts.critical,
-          })}
-        </Text2>
-      </Stack>
+      {stepTitle ? (
+        <StepHeader title={stepTitle} description={subtitle} />
+      ) : (
+        <Stack space={4}>
+          <Text4 medium as="h1">{result.name || t("title")}</Text4>
+          <Text2 regular color={skinVars.colors.textSecondary}>
+            {subtitle}
+          </Text2>
+        </Stack>
+      )}
 
       <Tabs
         selectedIndex={tab}
@@ -242,25 +395,34 @@ function ResultsStep({ result, hideTitle = false }: ResultsStepProps) {
         <InlineError message={tCommon("error.description")} />
       ) : (
         <Stack space={32}>
-          <Stack space={16}>
-            <Stack space={4}>
-              <Text4 medium as="h2">{solved ? t("graphTitleSolution") : t("graphTitleFindings")}</Text4>
-              <Text2 regular color={skinVars.colors.textSecondary}>{solved ? t("graphDescSolution") : t("graphDescFindings")}</Text2>
+          {!solved && <CoverageWarnings warnings={result.warnings} framework={result.sourceFramework} />}
+
+          <div ref={graphSectionRef} style={{ scrollMarginTop: 16, scrollMarginBottom: 16 }}>
+            <Stack space={16}>
+              <Stack space={4}>
+                <Text4 medium as="h2">{solved ? t("graphTitleSolution") : t("graphTitleFindings")}</Text4>
+                <Text2 regular color={skinVars.colors.textSecondary}>{solved ? t("graphDescSolution") : t("graphDescFindings")}</Text2>
+              </Stack>
+              <CapabilityGraph
+                analysisId={result.analysisId}
+                solved={solved}
+                nodes={solved && sol ? sol.nodes : result.nodes}
+                edges={solved && sol ? sol.edges : result.edges}
+                findings={solved && sol ? openFindings : findings}
+                name={result.name}
+                attacks={solved && sol ? sol.attacks : result.attacks}
+                appliedControlCount={solved && sol ? sol.appliedControlCount : undefined}
+                nodeControlInfo={solved && sol ? sol.nodeControlInfo : undefined}
+                edgeControlInfo={solved && sol ? sol.edgeControlInfo : undefined}
+                onToggleView={() => setTab(solved ? 0 : 1)}
+                solutionAvailable={Boolean(sol)}
+                findingLabelById={labelById}
+                selectedFindingId={selectedFindingId}
+                onSelectFinding={selectFinding}
+                onClearSelection={clearSelection}
+              />
             </Stack>
-            <CapabilityGraph
-              solved={solved}
-              nodes={solved && sol ? sol.nodes : result.nodes}
-              edges={solved && sol ? sol.edges : result.edges}
-              findings={findings}
-              name={result.name}
-              attacks={solved && sol ? sol.attacks : result.attacks}
-              appliedControlCount={solved && sol ? sol.appliedControlCount : undefined}
-              nodeControlInfo={solved && sol ? sol.nodeControlInfo : undefined}
-              edgeControlInfo={solved && sol ? sol.edgeControlInfo : undefined}
-              onToggleView={() => setTab(solved ? 0 : 1)}
-              solutionAvailable={Boolean(sol)}
-            />
-          </Stack>
+          </div>
 
           <Stack space={16}>
             <Text4 medium as="h2">{solved ? t("metricsTitleSolution") : t("metricsTitleFindings")}</Text4>
@@ -329,31 +491,32 @@ function ResultsStep({ result, hideTitle = false }: ResultsStepProps) {
               </Grid>
             ) : (
               sol && (
-                <Inline space={16} alignItems="center" expand={[0, 2]}>
+                <Inline space={16} alignItems="stretch" expand={[0, 2]} dataAttributes={{ testid: "before-after" }}>
                   <BeforeAfterCard
                     label={t("before")}
                     Icon={SEVERITY_STYLES.critical.Icon}
                     color={severityAccentColor("critical", isDarkMode)}
                     rows={[
                       { label: t("beforeAfter.findingCount"), value: sol.beforeAfter.before.findingCount, color: severityAccentColor("critical", isDarkMode) },
+                      { label: t("beforeAfter.causeCount"), value: causeCount(findings), color: severityAccentColor("critical", isDarkMode) },
                       { label: t("beforeAfter.criticalCount"), value: sol.beforeAfter.before.criticalCount, color: severityAccentColor("critical", isDarkMode) },
                       { label: t("beforeAfter.maxScore"), value: sol.beforeAfter.before.maxScore, color: severityAccentColor("critical", isDarkMode) },
                     ]}
                   />
-                  <IconArrowLineRightRegular color={skinVars.colors.brand} />
+                  <div style={{ display: "flex", alignItems: "center", height: "100%" }}>
+                    <IconArrowLineRightRegular color={skinVars.colors.brand} />
+                  </div>
                   <BeforeAfterCard
                     label={t("after")}
                     Icon={IconShieldCheckedOkRegular}
                     color={severityAccentColor("none", isDarkMode)}
-                    headerBadge={{
-                      label: t("beforeAfter.riskReduction"),
-                      value: `-${sol.beforeAfter.after.riskReductionPct}%`,
-                      color: severityAccentColor("none", isDarkMode),
-                    }}
                     rows={[
                       { label: t("beforeAfter.findingCount"), value: sol.beforeAfter.after.findingCount, color: severityAccentColor("none", isDarkMode) },
+                      { label: t("beforeAfter.causeCount"), value: causeCount(openFindings), color: severityAccentColor("none", isDarkMode) },
                       { label: t("beforeAfter.criticalCount"), value: sol.beforeAfter.after.criticalCount, color: severityAccentColor("none", isDarkMode) },
                       { label: t("beforeAfter.maxScore"), value: sol.beforeAfter.after.maxScore, color: severityAccentColor("none", isDarkMode) },
+                      { label: t("beforeAfter.riskReduction"), value: `-${sol.beforeAfter.after.riskReductionPct}%`, color: severityAccentColor("none", isDarkMode) },
+                      { label: t("beforeAfter.riskReductionByGroup"), value: `-${sol.beforeAfter.after.riskReductionByGroupPct}%`, color: severityAccentColor("none", isDarkMode) },
                     ]}
                   />
                 </Inline>
@@ -368,22 +531,37 @@ function ResultsStep({ result, hideTitle = false }: ResultsStepProps) {
           {!solved ? (
             findingGroups.length > 0 && (
               <BoxedAccordion>
-                {findingGroups.map(({ cls, items }) => (
+                {findingGroups.map(({ cls, items, patterns }) => (
                   <BoxedAccordionItem
                     key={cls}
                     title={cls === "attack" ? t("attackFindingsTitle") : t("hygieneTitle")}
-                    right={<Tag type="inactive" small>{`${items.length}`}</Tag>}
+                    subtitle={t("findingPatternsCount", { count: patterns.length })}
+                    right={<Align y="center" height="100%"><Tag type="inactive" small>{`${items.length}`}</Tag></Align>}
                     content={
                       <Stack space={12}>
-                        {items.map((f: Finding) => (
-                          <FindingCard
-                            key={f.id}
-                            finding={f}
-                            isDarkMode={isDarkMode}
-                            tSeverity={tSeverity}
-                            scoreLabel={t("tableHeaders.score")}
-                          />
-                        ))}
+                        {patterns.map((pattern) => {
+                          const [only] = pattern.findings;
+                          return pattern.findings.length === 1 ? (
+                            <FindingCard
+                              key={pattern.id}
+                              {...cardProps}
+                              finding={only}
+                              label={labelById.get(only.id) ?? only.ruleId}
+                              selected={only.id === selectedFindingId}
+                              onSelect={only.path.length > 0 ? selectFinding : undefined}
+                            />
+                          ) : (
+                            <FindingPatternCard
+                              key={pattern.id}
+                              {...cardProps}
+                              pattern={pattern}
+                              title={patternTitle(only)}
+                              labelById={labelById}
+                              selectedFindingId={selectedFindingId}
+                              onSelect={selectFinding}
+                            />
+                          );
+                        })}
                       </Stack>
                     }
                   />
@@ -398,7 +576,7 @@ function ResultsStep({ result, hideTitle = false }: ResultsStepProps) {
                     <BoxedAccordionItem
                       key="controls"
                       title={t("controlsTitle")}
-                      right={<Tag type="active" small>{`${sol.remediation.length}`}</Tag>}
+                      right={<Align y="center" height="100%"><Tag type="active" small>{`${sol.remediation.length}`}</Tag></Align>}
                       content={
                         <Timeline>
                           {sol.remediation.map((step) => (
@@ -422,17 +600,22 @@ function ResultsStep({ result, hideTitle = false }: ResultsStepProps) {
                   <BoxedAccordionItem
                     key="resolved"
                     title={t("resolved")}
-                    right={<Tag type="success" small>{`${findings.length}`}</Tag>}
+                    right={<Align y="center" height="100%"><Tag type="success" small>{`${resolvedFindings.length}`}</Tag></Align>}
                     content={
                       <Stack space={8}>
-                        {findings.map((f) => (
-                          <Boxed key={f.id}>
+                        {resolvedFindings.map((f) => (
+                          <Boxed key={f.id} dataAttributes={{ testid: "resolved-finding" }}>
                             <Box padding={16}>
                               <Stack space={8}>
-                                <Inline space={8} alignItems="center">
+                                <Inline space={8} alignItems="center" wrap verticalSpace={4}>
                                   <IconCheckFilled color={skinVars.colors.success} />
-                                  <Text2 medium>{f.ruleId} — {f.title}</Text2>
+                                  <Text2 medium>{labelById.get(f.id) ?? f.ruleId}</Text2>
+                                  <FindingId id={f.id} />
                                 </Inline>
+                                <Stack space={4}>
+                                  <Text2 regular>{f.title}</Text2>
+                                  <FindingRoute path={f.path} nodesById={nodesById} />
+                                </Stack>
                                 <Inline space={4} wrap verticalSpace={4}>
                                   {f.controls?.map((c) => <Tag key={c} type="success" small>{c}</Tag>)}
                                 </Inline>
@@ -456,7 +639,7 @@ function ResultsStep({ result, hideTitle = false }: ResultsStepProps) {
                     <IconDownloadRegular size={18} color={skinVars.colors.brand} />
                   </Circle>
                   <Stack space={2}>
-                    <Text2 medium>{solved ? t("exportTitleSolution") : t("exportTitleFindings")}</Text2>
+                    <Text3 medium>{solved ? t("exportTitleSolution") : t("exportTitleFindings")}</Text3>
                     <Text1 regular color={skinVars.colors.textSecondary}>
                       {solved ? t("exportDescSolution") : t("exportDescFindings")}
                     </Text1>

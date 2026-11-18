@@ -1,0 +1,59 @@
+# Coverage fixture (Dify): reaches every rule the adapter can express, using
+# the declarations listed in app/catalogs/adapter_coverage.yaml. Pinned by
+# tests/test_adapter_coverage.py.
+app:
+  name: Coverage Dify
+workflow:
+  # Intake writes the notes through the assigner and Writer reads them back:
+  # two agents share the variable (FH-009, FH-020, FH-029).
+  conversation_variables:
+    - {name: notes, value_type: string, value: ""}
+  graph:
+    nodes:
+      - {id: chat, data: {type: start, title: Customer chat}}
+      - {id: intake, data: {type: llm, title: Intake, exposure_boundary: external}}
+      - {id: records, data: {type: knowledge-retrieval, title: Customer records, sensitivity: high}}
+      - {id: feed, data: {type: knowledge-retrieval, title: Partner feed, boundary: external}}
+      - {id: patients, data: {type: knowledge-retrieval, title: Patient files, contains_regulated_data: [gdpr]}}
+      - {id: kb, data: {type: knowledge-retrieval, title: Knowledge base}}
+      - {id: ops, data: {type: answer, title: Ops channel, boundary: external, recipient_type: public_channel}}
+      - {id: browse, data: {type: tool, title: browser visit}}
+      - {id: python, data: {type: tool, title: python run}}
+      - {id: update, data: {type: tool, title: records update}}
+      - {id: delete, data: {type: tool, title: records delete}}
+      - {id: release, data: {type: tool, title: release pipeline, capability_kinds: [deployRelease]}}
+      - {id: admin, data: {type: tool, title: admin api, authentication_scope: elevated}}
+      - {id: planner, data: {type: llm, title: Planner}}
+      - {id: writer, data: {type: llm, title: Writer, prompt_template: [{role: system, text: "{{#conversation.notes#}}"}]}}
+      - {id: mail, data: {type: tool, title: gmail send}}
+      - {id: fixer, data: {type: llm, title: Fixer}}
+      - {id: reply, data: {type: answer, title: Reply}}
+      - id: save
+        data:
+          type: assigner
+          title: Save notes
+          items: [{variable_selector: [conversation, notes], input_type: variable, value: [intake, text]}]
+    edges:
+      - {source: chat, target: intake}
+      - {source: intake, target: records}
+      - {source: intake, target: feed}
+      - {source: intake, target: patients}
+      - {source: intake, target: kb}
+      - {source: intake, target: ops}
+      - {source: intake, target: browse}
+      - {source: intake, target: python}
+      - {source: intake, target: update}
+      - {source: intake, target: delete}
+      - {source: intake, target: release}
+      - {source: intake, target: admin}
+      # records -> writer carries the sensitive read on to an external send
+      # (FH-001); mail -> fixer -> update chains two side-effect tools (FH-030).
+      - {source: records, target: writer}
+      # intake -> planner -> writer -> mail: three agents to an external send (FH-007).
+      - {source: intake, target: planner}
+      - {source: planner, target: writer}
+      - {source: writer, target: mail}
+      - {source: mail, target: fixer}
+      - {source: fixer, target: update}
+      - {source: update, target: reply}
+      - {source: intake, target: save}

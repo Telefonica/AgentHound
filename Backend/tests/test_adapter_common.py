@@ -6,7 +6,8 @@ from app.core.coerce import as_bool
 from app.core.ir.models import NodeType
 from app.core.parser.adapters._common import (
     IdFactory,
-    apply_tool_overrides,
+    apply_declared_properties,
+    infer_asset_properties,
     infer_tool_properties,
     tool_effect,
 )
@@ -17,18 +18,36 @@ def test_executecode_tool_is_irreversible():
     assert infer_tool_properties("python.run")["side_effect_reversible"] is False
 
 
-def test_apply_tool_overrides_only_copies_whitelisted_keys():
+def test_apply_declared_properties_only_copies_declarable_keys():
     props = infer_tool_properties("gmail.send")
-    apply_tool_overrides(props, {"requires_approval": True, "not_a_tool_field": "x"})
+    apply_declared_properties(props, {"requires_approval": True, "not_a_tool_field": "x"}, NodeType.TOOL)
     assert props["requires_approval"] is True
     assert "not_a_tool_field" not in props
 
 
-def test_apply_tool_overrides_coerces_scalar_capability_kinds():
+def test_apply_declared_properties_accepts_every_catalogued_property():
+    # Properties the rules read but the old per-adapter lists dropped.
+    tool = infer_tool_properties("payments.charge")
+    apply_declared_properties(tool, {"authentication_scope": "elevated", "idempotent": False}, NodeType.TOOL)
+    assert tool["authentication_scope"] == "elevated"
+    assert tool["idempotent"] is False
+
+    asset = infer_asset_properties("Patients")
+    apply_declared_properties(asset, {"contains_regulated_data": "gdpr"}, NodeType.DATA_ASSET)
+    assert asset["contains_regulated_data"] == ["gdpr"]
+
+
+def test_apply_declared_properties_ignores_null_values():
+    props = infer_asset_properties("CRM records")
+    apply_declared_properties(props, {"sensitivity": None}, NodeType.DATA_ASSET)
+    assert props["sensitivity"] == "high"
+
+
+def test_apply_declared_properties_coerces_scalar_capability_kinds():
     # A scalar capability_kinds override must become a list so tool_effect does a
     # membership test, not a substring match over a string.
     props = infer_tool_properties("do.thing")
-    apply_tool_overrides(props, {"capability_kinds": "send"})
+    apply_declared_properties(props, {"capability_kinds": "send"}, NodeType.TOOL)
     assert props["capability_kinds"] == ["send"]
     assert tool_effect(props) == "send"
 

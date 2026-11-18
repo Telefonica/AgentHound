@@ -1,0 +1,796 @@
+{
+  "analysis_id": "ops-destructive",
+  "applied_controls": [
+    {
+      "control_id": "delegationScoping",
+      "name": "Delegation scoping",
+      "category": "access",
+      "effect": "total",
+      "status": "present",
+      "target_node_id": "agent_ops_executor",
+      "affected_edge_ids": [
+        "edge_008"
+      ]
+    },
+    {
+      "control_id": "humanInTheLoop",
+      "name": "Human approval",
+      "category": "decision",
+      "effect": "total",
+      "status": "present",
+      "target_node_id": "tool_customer_records_delete",
+      "affected_edge_ids": [
+        "edge_003",
+        "edge_004"
+      ]
+    },
+    {
+      "control_id": "humanInTheLoop",
+      "name": "Human approval",
+      "category": "decision",
+      "effect": "total",
+      "status": "present",
+      "target_node_id": "tool_crm_records_update",
+      "affected_edge_ids": [
+        "edge_005",
+        "edge_006"
+      ]
+    },
+    {
+      "control_id": "inputSanitization",
+      "name": "Input sanitization",
+      "category": "validation",
+      "effect": "partial",
+      "status": "present",
+      "target_node_id": "agent_ticket_intake",
+      "affected_edge_ids": [
+        "edge_007"
+      ]
+    },
+    {
+      "control_id": "interAgentAuthentication",
+      "name": "Inter-agent authentication",
+      "category": "access",
+      "effect": "partial",
+      "status": "present",
+      "target_node_id": "agent_ops_executor",
+      "affected_edge_ids": [
+        "edge_008"
+      ]
+    },
+    {
+      "control_id": "leastPrivilege",
+      "name": "Least privilege",
+      "category": "access",
+      "effect": "partial",
+      "status": "present",
+      "target_node_id": "tool_customer_records_database_read",
+      "affected_edge_ids": [
+        "edge_001",
+        "edge_002"
+      ]
+    },
+    {
+      "control_id": "accessScopeRestriction",
+      "name": "Access scope restriction",
+      "category": "access",
+      "effect": "partial",
+      "status": "present",
+      "target_node_id": "asset_customer_records_database_read_data",
+      "affected_edge_ids": [
+        "edge_002"
+      ]
+    },
+    {
+      "control_id": "dataClassification",
+      "name": "Data classification",
+      "category": "governance",
+      "effect": "partial",
+      "status": "present",
+      "target_node_id": "asset_customer_records_database_read_data",
+      "affected_edge_ids": [
+        "edge_002"
+      ]
+    },
+    {
+      "control_id": "dryRunFirst",
+      "name": "Dry run first",
+      "category": "decision",
+      "effect": "partial",
+      "status": "present",
+      "target_node_id": "asset_crm_records_update_resource",
+      "affected_edge_ids": [
+        "edge_006"
+      ]
+    },
+    {
+      "control_id": "dryRunFirst",
+      "name": "Dry run first",
+      "category": "decision",
+      "effect": "partial",
+      "status": "present",
+      "target_node_id": "asset_customer_records_delete_resource",
+      "affected_edge_ids": [
+        "edge_004"
+      ]
+    },
+    {
+      "control_id": "rollbackReady",
+      "name": "Rollback ready",
+      "category": "recovery",
+      "effect": "partial",
+      "status": "present",
+      "target_node_id": "asset_crm_records_update_resource",
+      "affected_edge_ids": [
+        "edge_006"
+      ]
+    },
+    {
+      "control_id": "rollbackReady",
+      "name": "Rollback ready",
+      "category": "recovery",
+      "effect": "partial",
+      "status": "present",
+      "target_node_id": "asset_customer_records_delete_resource",
+      "affected_edge_ids": [
+        "edge_004"
+      ]
+    },
+    {
+      "control_id": "softDeleteFallback",
+      "name": "Soft delete fallback",
+      "category": "recovery",
+      "effect": "partial",
+      "status": "present",
+      "target_node_id": "asset_customer_records_delete_resource",
+      "affected_edge_ids": [
+        "edge_004"
+      ]
+    },
+    {
+      "control_id": "promptInjectionDetector",
+      "name": "Prompt injection detector",
+      "category": "detection",
+      "effect": "detector",
+      "status": "present",
+      "target_node_id": "agent_ticket_intake",
+      "affected_edge_ids": [
+        "edge_007"
+      ]
+    },
+    {
+      "control_id": "promptShielding",
+      "name": "Prompt shielding",
+      "category": "input",
+      "effect": "detector",
+      "status": "present",
+      "target_node_id": "agent_ticket_intake",
+      "affected_edge_ids": [
+        "edge_007"
+      ]
+    }
+  ],
+  "before": {
+    "finding_count": 17,
+    "critical_count": 2,
+    "max_score": 10.0
+  },
+  "after": {
+    "finding_count": 10,
+    "critical_count": 0,
+    "max_score": 8.8
+  },
+  "risk_reduction": {
+    "absolute": 61.8,
+    "percentage": 52.4,
+    "by_group": {
+      "absolute": 43.0,
+      "percentage": 49.6
+    }
+  },
+  "broken_paths": [
+    {
+      "finding_id": "finding_001",
+      "rule_id": "FH-011",
+      "broken_by": "delegationScoping",
+      "target_node_id": "agent_ops_executor"
+    },
+    {
+      "finding_id": "finding_002",
+      "rule_id": "FH-011",
+      "broken_by": "delegationScoping",
+      "target_node_id": "agent_ops_executor"
+    },
+    {
+      "finding_id": "finding_003",
+      "rule_id": "FH-002",
+      "broken_by": "delegationScoping",
+      "target_node_id": "agent_ops_executor"
+    },
+    {
+      "finding_id": "finding_006",
+      "rule_id": "FH-019",
+      "broken_by": "humanInTheLoop",
+      "target_node_id": "tool_customer_records_delete"
+    },
+    {
+      "finding_id": "finding_007",
+      "rule_id": "FH-019",
+      "broken_by": "humanInTheLoop",
+      "target_node_id": "tool_crm_records_update"
+    },
+    {
+      "finding_id": "finding_008",
+      "rule_id": "FH-032",
+      "broken_by": null,
+      "target_node_id": null
+    },
+    {
+      "finding_id": "finding_011",
+      "rule_id": "FH-023",
+      "broken_by": "delegationScoping",
+      "target_node_id": "agent_ops_executor"
+    }
+  ],
+  "graph": {
+    "nodes": [
+      {
+        "id": "input_inbound_maintenance_ticket_email",
+        "label": "Inbound maintenance ticket email",
+        "type": "input",
+        "risk_score": 7.6,
+        "properties": {
+          "trust_level": "untrusted",
+          "content_types": [],
+          "authenticated_source": false,
+          "contains_pii_potential": true,
+          "sanitized_before_agent": false,
+          "injection_detector_present": false,
+          "rate_limit_present": false,
+          "replay_protection": false,
+          "source_type": "external_email"
+        },
+        "badges": [
+          "untrusted"
+        ]
+      },
+      {
+        "id": "agent_ticket_intake",
+        "label": "ticket_intake",
+        "type": "agent",
+        "risk_score": 6.1,
+        "properties": {
+          "role_type": "worker",
+          "trust_level": "untrusted",
+          "autonomy_level": "full_auto",
+          "guardrails": [],
+          "exposure_boundary": "internal",
+          "has_scoped_delegation": false
+        },
+        "badges": [
+          "full_auto",
+          "no_guardrails"
+        ]
+      },
+      {
+        "id": "agent_ops_executor",
+        "label": "ops_executor",
+        "type": "agent",
+        "risk_score": 4.8,
+        "properties": {
+          "role_type": "worker",
+          "trust_level": "internal_logic",
+          "autonomy_level": "full_auto",
+          "guardrails": [],
+          "exposure_boundary": "internal",
+          "has_scoped_delegation": false
+        },
+        "badges": [
+          "full_auto",
+          "no_guardrails"
+        ]
+      },
+      {
+        "id": "tool_customer_records_database_read",
+        "label": "Customer Records Database read",
+        "type": "tool",
+        "risk_score": 0.0,
+        "properties": {
+          "operation_kind": "read",
+          "target_boundary": "internal",
+          "side_effect": false,
+          "side_effect_reversible": true,
+          "idempotent": false,
+          "requires_approval": false,
+          "approval_actor_role": "",
+          "authentication_scope": "agent_service_account",
+          "allowlist_present": false,
+          "rate_limit_present": false,
+          "sandbox_enabled": false,
+          "dry_run_available": false,
+          "audit_logging_enabled": false,
+          "capability_kinds": [
+            "read"
+          ],
+          "access_kind": "internal_read"
+        },
+        "badges": [
+          "no_approval"
+        ]
+      },
+      {
+        "id": "asset_customer_records_database_read_data",
+        "label": "Customer Records Database read data",
+        "type": "data_asset",
+        "risk_score": 0.0,
+        "properties": {
+          "sensitivity": "high",
+          "boundary": "internal",
+          "contains_pii": true,
+          "contains_credentials": false,
+          "contains_regulated_data": [],
+          "access_scope": "all_users",
+          "retention_ttl_days": null,
+          "encryption_at_rest": false,
+          "asset_kind": "database"
+        },
+        "badges": [
+          "high_sensitivity",
+          "pii"
+        ]
+      },
+      {
+        "id": "tool_customer_records_delete",
+        "label": "customer_records_delete",
+        "type": "tool",
+        "risk_score": 8.8,
+        "properties": {
+          "operation_kind": "delete",
+          "target_boundary": "internal",
+          "side_effect": true,
+          "side_effect_reversible": false,
+          "idempotent": false,
+          "requires_approval": false,
+          "approval_actor_role": "",
+          "authentication_scope": "agent_service_account",
+          "allowlist_present": false,
+          "rate_limit_present": false,
+          "sandbox_enabled": false,
+          "dry_run_available": false,
+          "audit_logging_enabled": false,
+          "capability_kinds": [
+            "deleteResource",
+            "invokeTool"
+          ],
+          "access_kind": "internal_read"
+        },
+        "badges": [
+          "side_effect",
+          "no_approval"
+        ]
+      },
+      {
+        "id": "asset_customer_records_delete_resource",
+        "label": "customer_records_delete resource",
+        "type": "data_asset",
+        "risk_score": 0.0,
+        "properties": {
+          "sensitivity": "high",
+          "boundary": "internal",
+          "contains_pii": true,
+          "contains_credentials": false,
+          "contains_regulated_data": [],
+          "access_scope": "all_users",
+          "retention_ttl_days": null,
+          "encryption_at_rest": false,
+          "asset_kind": "database"
+        },
+        "badges": [
+          "high_sensitivity",
+          "pii"
+        ]
+      },
+      {
+        "id": "tool_crm_records_update",
+        "label": "crm_records_update",
+        "type": "tool",
+        "risk_score": 8.8,
+        "properties": {
+          "operation_kind": "modify",
+          "target_boundary": "internal",
+          "side_effect": true,
+          "side_effect_reversible": false,
+          "idempotent": false,
+          "requires_approval": false,
+          "approval_actor_role": "",
+          "authentication_scope": "agent_service_account",
+          "allowlist_present": false,
+          "rate_limit_present": false,
+          "sandbox_enabled": false,
+          "dry_run_available": false,
+          "audit_logging_enabled": false,
+          "capability_kinds": [
+            "modifyResource",
+            "invokeTool"
+          ],
+          "access_kind": "internal_read"
+        },
+        "badges": [
+          "side_effect",
+          "no_approval"
+        ]
+      },
+      {
+        "id": "asset_crm_records_update_resource",
+        "label": "crm_records_update resource",
+        "type": "data_asset",
+        "risk_score": 0.0,
+        "properties": {
+          "sensitivity": "high",
+          "boundary": "internal",
+          "contains_pii": true,
+          "contains_credentials": false,
+          "contains_regulated_data": [],
+          "access_scope": "all_users",
+          "retention_ttl_days": null,
+          "encryption_at_rest": false,
+          "asset_kind": "database"
+        },
+        "badges": [
+          "high_sensitivity",
+          "pii"
+        ]
+      },
+      {
+        "id": "control_delegationScoping_agent_ops_executor",
+        "label": "Delegation scoping",
+        "type": "control",
+        "risk_score": 0.0,
+        "properties": {
+          "control_kind": "delegationScoping",
+          "category": "access",
+          "effect": "total",
+          "status": "present",
+          "target_node_id": "agent_ops_executor"
+        },
+        "badges": [
+          "blocks"
+        ]
+      },
+      {
+        "id": "control_humanInTheLoop_tool_customer_records_delete",
+        "label": "Human approval",
+        "type": "control",
+        "risk_score": 0.0,
+        "properties": {
+          "control_kind": "humanInTheLoop",
+          "category": "decision",
+          "effect": "total",
+          "status": "present",
+          "target_node_id": "tool_customer_records_delete"
+        },
+        "badges": [
+          "blocks"
+        ]
+      },
+      {
+        "id": "control_humanInTheLoop_tool_crm_records_update",
+        "label": "Human approval",
+        "type": "control",
+        "risk_score": 0.0,
+        "properties": {
+          "control_kind": "humanInTheLoop",
+          "category": "decision",
+          "effect": "total",
+          "status": "present",
+          "target_node_id": "tool_crm_records_update"
+        },
+        "badges": [
+          "blocks"
+        ]
+      },
+      {
+        "id": "control_inputSanitization_agent_ticket_intake",
+        "label": "Input sanitization",
+        "type": "control",
+        "risk_score": 0.0,
+        "properties": {
+          "control_kind": "inputSanitization",
+          "category": "validation",
+          "effect": "partial",
+          "status": "present",
+          "target_node_id": "agent_ticket_intake"
+        },
+        "badges": [
+          "mitigates"
+        ]
+      },
+      {
+        "id": "control_interAgentAuthentication_agent_ops_executor",
+        "label": "Inter-agent authentication",
+        "type": "control",
+        "risk_score": 0.0,
+        "properties": {
+          "control_kind": "interAgentAuthentication",
+          "category": "access",
+          "effect": "partial",
+          "status": "present",
+          "target_node_id": "agent_ops_executor"
+        },
+        "badges": [
+          "mitigates"
+        ]
+      },
+      {
+        "id": "control_leastPrivilege_tool_customer_records_database_read",
+        "label": "Least privilege",
+        "type": "control",
+        "risk_score": 0.0,
+        "properties": {
+          "control_kind": "leastPrivilege",
+          "category": "access",
+          "effect": "partial",
+          "status": "present",
+          "target_node_id": "tool_customer_records_database_read"
+        },
+        "badges": [
+          "mitigates"
+        ]
+      },
+      {
+        "id": "control_accessScopeRestriction_asset_customer_records_database_read_data",
+        "label": "Access scope restriction",
+        "type": "control",
+        "risk_score": 0.0,
+        "properties": {
+          "control_kind": "accessScopeRestriction",
+          "category": "access",
+          "effect": "partial",
+          "status": "present",
+          "target_node_id": "asset_customer_records_database_read_data"
+        },
+        "badges": [
+          "mitigates"
+        ]
+      },
+      {
+        "id": "control_dataClassification_asset_customer_records_database_read_data",
+        "label": "Data classification",
+        "type": "control",
+        "risk_score": 0.0,
+        "properties": {
+          "control_kind": "dataClassification",
+          "category": "governance",
+          "effect": "partial",
+          "status": "present",
+          "target_node_id": "asset_customer_records_database_read_data"
+        },
+        "badges": [
+          "mitigates"
+        ]
+      },
+      {
+        "id": "control_dryRunFirst_asset_crm_records_update_resource",
+        "label": "Dry run first",
+        "type": "control",
+        "risk_score": 0.0,
+        "properties": {
+          "control_kind": "dryRunFirst",
+          "category": "decision",
+          "effect": "partial",
+          "status": "present",
+          "target_node_id": "asset_crm_records_update_resource"
+        },
+        "badges": [
+          "mitigates"
+        ]
+      },
+      {
+        "id": "control_dryRunFirst_asset_customer_records_delete_resource",
+        "label": "Dry run first",
+        "type": "control",
+        "risk_score": 0.0,
+        "properties": {
+          "control_kind": "dryRunFirst",
+          "category": "decision",
+          "effect": "partial",
+          "status": "present",
+          "target_node_id": "asset_customer_records_delete_resource"
+        },
+        "badges": [
+          "mitigates"
+        ]
+      },
+      {
+        "id": "control_rollbackReady_asset_crm_records_update_resource",
+        "label": "Rollback ready",
+        "type": "control",
+        "risk_score": 0.0,
+        "properties": {
+          "control_kind": "rollbackReady",
+          "category": "recovery",
+          "effect": "partial",
+          "status": "present",
+          "target_node_id": "asset_crm_records_update_resource"
+        },
+        "badges": [
+          "mitigates"
+        ]
+      },
+      {
+        "id": "control_rollbackReady_asset_customer_records_delete_resource",
+        "label": "Rollback ready",
+        "type": "control",
+        "risk_score": 0.0,
+        "properties": {
+          "control_kind": "rollbackReady",
+          "category": "recovery",
+          "effect": "partial",
+          "status": "present",
+          "target_node_id": "asset_customer_records_delete_resource"
+        },
+        "badges": [
+          "mitigates"
+        ]
+      },
+      {
+        "id": "control_softDeleteFallback_asset_customer_records_delete_resource",
+        "label": "Soft delete fallback",
+        "type": "control",
+        "risk_score": 0.0,
+        "properties": {
+          "control_kind": "softDeleteFallback",
+          "category": "recovery",
+          "effect": "partial",
+          "status": "present",
+          "target_node_id": "asset_customer_records_delete_resource"
+        },
+        "badges": [
+          "mitigates"
+        ]
+      },
+      {
+        "id": "control_promptInjectionDetector_agent_ticket_intake",
+        "label": "Prompt injection detector",
+        "type": "control",
+        "risk_score": 0.0,
+        "properties": {
+          "control_kind": "promptInjectionDetector",
+          "category": "detection",
+          "effect": "detector",
+          "status": "present",
+          "target_node_id": "agent_ticket_intake"
+        },
+        "badges": [
+          "detects"
+        ]
+      },
+      {
+        "id": "control_promptShielding_agent_ticket_intake",
+        "label": "Prompt shielding",
+        "type": "control",
+        "risk_score": 0.0,
+        "properties": {
+          "control_kind": "promptShielding",
+          "category": "input",
+          "effect": "detector",
+          "status": "present",
+          "target_node_id": "agent_ticket_intake"
+        },
+        "badges": [
+          "detects"
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge_001",
+        "source": "agent_ops_executor",
+        "target": "tool_customer_records_database_read",
+        "label": "invokeTool",
+        "capability": "invokeTool",
+        "properties": {},
+        "risk_level": "info",
+        "blocked": false,
+        "mitigated": true,
+        "detected": false,
+        "finding_ids": []
+      },
+      {
+        "id": "edge_002",
+        "source": "tool_customer_records_database_read",
+        "target": "asset_customer_records_database_read_data",
+        "label": "read",
+        "capability": "read",
+        "properties": {},
+        "risk_level": "info",
+        "blocked": false,
+        "mitigated": true,
+        "detected": false,
+        "finding_ids": []
+      },
+      {
+        "id": "edge_003",
+        "source": "agent_ops_executor",
+        "target": "tool_customer_records_delete",
+        "label": "invokeTool",
+        "capability": "invokeTool",
+        "properties": {},
+        "risk_level": "info",
+        "blocked": true,
+        "mitigated": false,
+        "detected": false,
+        "finding_ids": []
+      },
+      {
+        "id": "edge_004",
+        "source": "tool_customer_records_delete",
+        "target": "asset_customer_records_delete_resource",
+        "label": "deleteResource",
+        "capability": "deleteResource",
+        "properties": {},
+        "risk_level": "info",
+        "blocked": true,
+        "mitigated": false,
+        "detected": false,
+        "finding_ids": []
+      },
+      {
+        "id": "edge_005",
+        "source": "agent_ops_executor",
+        "target": "tool_crm_records_update",
+        "label": "invokeTool",
+        "capability": "invokeTool",
+        "properties": {},
+        "risk_level": "info",
+        "blocked": true,
+        "mitigated": false,
+        "detected": false,
+        "finding_ids": []
+      },
+      {
+        "id": "edge_006",
+        "source": "tool_crm_records_update",
+        "target": "asset_crm_records_update_resource",
+        "label": "modifyResource",
+        "capability": "modifyResource",
+        "properties": {},
+        "risk_level": "info",
+        "blocked": true,
+        "mitigated": false,
+        "detected": false,
+        "finding_ids": []
+      },
+      {
+        "id": "edge_007",
+        "source": "input_inbound_maintenance_ticket_email",
+        "target": "agent_ticket_intake",
+        "label": "receiveInstruction",
+        "capability": "receiveInstruction",
+        "properties": {},
+        "risk_level": "medium",
+        "blocked": false,
+        "mitigated": true,
+        "detected": false,
+        "finding_ids": [
+          "finding_004"
+        ]
+      },
+      {
+        "id": "edge_008",
+        "source": "agent_ticket_intake",
+        "target": "agent_ops_executor",
+        "label": "delegateTo",
+        "capability": "delegateTo",
+        "properties": {
+          "has_scoped_delegation": false
+        },
+        "risk_level": "info",
+        "blocked": true,
+        "mitigated": false,
+        "detected": false,
+        "finding_ids": []
+      }
+    ]
+  }
+}

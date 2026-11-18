@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import ContentLayout from "@/components/layout/ContentLayout";
+import DashboardPage from "@/components/layout/DashboardPage";
+import KpiCard from "@/components/ui/KpiCard";
 import {
   Box,
   Stack,
@@ -12,10 +13,7 @@ import {
   Spinner,
   Text2,
   Text6,
-  Text8,
   Tabs,
-  DataCard,
-  Tag,
   Boxed,
   RowList,
   Row,
@@ -23,15 +21,19 @@ import {
   ButtonSecondary,
   IconAddMoreRegular,
   IconAddMoreFilled,
+  IconArrowDownFilled,
+  IconCheckedFilled,
+  IconListRegular,
   IconTrashCanRegular,
+  IconWarningFilled,
   skinVars,
   useDialog,
   useTheme,
-  Text7,
 } from "@telefonica/mistica";
 import { useLocale, useTranslations } from "next-intl";
 import InlineError from "@/components/ui/InlineError";
 import Pagination from "@/components/ui/Pagination";
+import SeverityBadge from "@/components/threat-model/SeverityBadge";
 import { deleteAnalysis, listAnalyses } from "@/lib/api/agentHound";
 import { toAnalysisSummaryItem, type AnalysisSummaryItem } from "@/lib/api/adapters";
 import { SEVERITY_STYLES } from "@/lib/severity";
@@ -128,94 +130,94 @@ export default function Page() {
   // The three severity buckets partition the list: every severity falls in
   // exactly one, so they always add up to the total.
   const kpis = [
-    { key: "totalModels", value: models.length, severity: null },
+    { key: "totalModels", value: models.length, severity: null, Icon: IconListRegular },
     {
       key: "critical",
       value: models.filter((m) => m.severity === "critical" || m.severity === "high").length,
       severity: "critical" as const,
+      Icon: IconWarningFilled,
     },
     {
       key: "medium",
       value: models.filter((m) => m.severity === "medium" || m.severity === "low").length,
       severity: "medium" as const,
+      Icon: IconArrowDownFilled,
     },
-    { key: "clean", value: models.filter((m) => m.severity === "none").length, severity: "none" as const },
+    {
+      key: "clean",
+      value: models.filter((m) => m.severity === "none").length,
+      severity: "none" as const,
+      Icon: IconCheckedFilled,
+    },
   ] as const;
 
+  const showKpis = !loading && !error;
+
+  const kpiRow = showKpis ? (
+    <Grid columns={4} gap={16}>
+      {kpis.map(({ key, value, severity, Icon }) => {
+        const style = severity ? SEVERITY_STYLES[severity] : null;
+        const color = style
+          ? isDarkMode
+            ? style.accentDark
+            : style.accentLight
+          : skinVars.colors.neutralHigh;
+        return (
+          <KpiCard
+            key={key}
+            Icon={Icon}
+            iconColor={style ? color : skinVars.colors.brand}
+            title={t(`kpis.${key}`)}
+            value={value}
+            valueColor={color}
+          />
+        );
+      })}
+    </Grid>
+  ) : undefined;
+
   return (
-    <ContentLayout paddingTop={107}>
-      <Box paddingX={32}>
-        <Stack space={48}>
-          <Stack space={32}>
-            <Inline space="between" alignItems="flex-start">
-              <Stack space={4}>
-                <Text8 as="h1" color={skinVars.colors.neutralHigh}>
-                  {t("title")}
-                </Text8>
+    <DashboardPage
+      title={t("title")}
+      action={
+        <ButtonPrimary StartIcon={IconAddMoreRegular} onPress={goToNewThreatModel}>
+          {t("newThreatModel")}
+        </ButtonPrimary>
+      }
+      kpis={kpiRow}
+    >
+      <Stack space={16}>
+        <Box width={145}>
+          <Tabs selectedIndex={tab} onChange={setTab} tabs={[{ text: t("listTitle") }]} />
+        </Box>
+        {loading ? (
+          <Box paddingY={48}>
+            <Align x="center">
+              <Spinner size={32} color={skinVars.colors.brand} />
+            </Align>
+          </Box>
+        ) : error ? (
+          <InlineError message={t("loadError")} onRetry={retry} />
+        ) : models.length === 0 ? (
+          <Boxed>
+            <Box padding={24}>
+              <Stack space={32}>
+                <Stack space={16}>
+                  <Text6>{t("emptyTitle")}</Text6>
+                  <Box width={485}>
+                    <Text2 regular color={skinVars.colors.textSecondary}>
+                      {t("description")}
+                    </Text2>
+                  </Box>
+                </Stack>
+                <ButtonSecondary StartIcon={IconAddMoreFilled} onPress={goToNewThreatModel}>
+                  {t("newThreatModel")}
+                </ButtonSecondary>
               </Stack>
-              <ButtonPrimary StartIcon={IconAddMoreRegular} onPress={goToNewThreatModel}>
-                {t("newThreatModel")}
-              </ButtonPrimary>
-            </Inline>
-
-            {!loading && !error && (
-              <Grid columns={4} gap={16}>
-                {kpis.map(({ key, value, severity }) => {
-                  const style = severity ? SEVERITY_STYLES[severity] : null;
-                  const color = style
-                    ? isDarkMode
-                      ? style.accentDark
-                      : style.accentLight
-                    : skinVars.colors.neutralHigh;
-                  return (
-                    <DataCard
-                      key={key}
-                      width="100%"
-                      title={t(`kpis.${key}`)}
-                      slot={
-                        <Box paddingTop={40} paddingBottom={24}>
-                          <Text7 color={color}>{value}</Text7>
-                        </Box>
-                      }
-                    />
-                  );
-                })}
-              </Grid>
-            )}
-          </Stack>
-
-          <Stack space={16}>
-            <Box width={145}>
-              <Tabs selectedIndex={tab} onChange={setTab} tabs={[{ text: t("listTitle") }]} />
             </Box>
-            {loading ? (
-              <Box paddingY={48}>
-                <Align x="center">
-                  <Spinner size={32} color={skinVars.colors.brand} />
-                </Align>
-              </Box>
-            ) : error ? (
-              <InlineError message={t("loadError")} onRetry={retry} />
-            ) : models.length === 0 ? (
-              <Boxed>
-                <Box padding={24}>
-                  <Stack space={32}>
-                    <Stack space={16}>
-                      <Text6>{t("emptyTitle")}</Text6>
-                      <Box width={485}>
-                        <Text2 regular color={skinVars.colors.textSecondary}>
-                          {t("description")}
-                        </Text2>
-                      </Box>
-                    </Stack>
-                    <ButtonSecondary StartIcon={IconAddMoreFilled} onPress={goToNewThreatModel}>
-                      {t("newThreatModel")}
-                    </ButtonSecondary>
-                  </Stack>
-                </Box>
-              </Boxed>
-            ) : (
-            <Stack space={24}>
+          </Boxed>
+        ) : (
+          <Stack space={24}>
             <Boxed>
               <Box paddingX={8} paddingY={8}>
                 <RowList>
@@ -238,9 +240,9 @@ export default function Page() {
                                   {model.findings > 0 ? model.findings : ""}
                                 </Text2>
                               </Box>
-                              <Tag backgroundColor={style.background} textColor={style.text}>
+                              <SeverityBadge severity={model.severity} withIcon>
                                 {t(`severity.${model.severity}`)}
-                              </Tag>
+                              </SeverityBadge>
                             </Inline>
                           </Align>
                         }
@@ -264,11 +266,9 @@ export default function Page() {
             <Align x="start">
               <Pagination currentPage={safePage} totalPages={totalPages} onPageChange={setPage} />
             </Align>
-            </Stack>
-            )}
           </Stack>
-        </Stack>
-      </Box>
-    </ContentLayout>
+        )}
+      </Stack>
+    </DashboardPage>
   );
 }

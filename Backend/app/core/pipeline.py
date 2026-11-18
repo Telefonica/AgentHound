@@ -229,6 +229,7 @@ def analyze_graph(
         nodes=reconciled_nodes,
         edges=reconciled_edges,
         controls=stored.ir.controls,
+        parse_warnings=stored.ir.parse_warnings,
     )
     normalize(ir)
     validate_ir(ir)

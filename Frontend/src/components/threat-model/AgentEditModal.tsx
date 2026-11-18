@@ -11,6 +11,7 @@ import {
   Drawer,
   Grid,
   IconAddMoreRegular,
+  IconInformationRegular,
   IconPuzzleRegular,
   IconRobotRegular,
   Inline,
@@ -20,6 +21,7 @@ import {
   Text1,
   Text2,
   TextField,
+  Tooltip,
   skinVars,
   useScreenSize,
 } from "@telefonica/mistica";
@@ -31,6 +33,7 @@ import {
   type CapabilityLink,
   type EditableCapabilityRow,
 } from "@/lib/agentCapabilities";
+import { useCapabilityRules } from "@/hooks/useCapabilityRules";
 import type { GraphEdge, GraphNode } from "@/types/ThreatModel";
 
 const DND_MIME = "application/x-agenthound-capability";
@@ -58,18 +61,21 @@ interface AgentEditModalProps {
 function CatalogChip({
   row,
   capability,
+  rules,
   disabled,
   onAdd,
 }: {
   row: EditableCapabilityRow;
   capability: string;
+  rules?: readonly string[];
   disabled?: boolean;
   onAdd: () => void;
 }) {
+  const t = useTranslations("inference");
   if (disabled) {
     return <Tag small type="inactive">{capability}</Tag>;
   }
-  return (
+  const chip = (
     <span
       draggable
       onDragStart={(e) => {
@@ -82,6 +88,11 @@ function CatalogChip({
         {capability}
       </Chip>
     </span>
+  );
+  return rules?.length ? (
+    <Tooltip description={t("checkedBy", { count: rules.length, rules: rules.join(", ") })} target={chip} />
+  ) : (
+    chip
   );
 }
 
@@ -96,6 +107,10 @@ function AgentEditModal({ agentId, nodes, edges, onSave, onClose }: AgentEditMod
   const [pending, setPending] = useState<PendingEntry | null>(null);
   const [pendingTarget, setPendingTarget] = useState("");
   const [dragOver, setDragOver] = useState(false);
+  const [hasFinePointer] = useState(() => !window.matchMedia("(pointer: coarse)").matches);
+  const rulesByVerb = useCapabilityRules();
+  const isUnchecked = (verb: string) => rulesByVerb != null && !rulesByVerb.get(verb)?.length;
+  const pendingRules = pending ? rulesByVerb?.get(pending.capability) : undefined;
 
   const group = useMemo(
     () => groupByAgent(draftNodes, draftEdges).agents.find((a) => a.agent.id === agentId) ?? null,
@@ -225,24 +240,38 @@ function AgentEditModal({ agentId, nodes, edges, onSave, onClose }: AgentEditMod
             </Inline>
             <Text1 regular color={skinVars.colors.textSecondary}>{t("catalogHint")}</Text1>
           </Stack>
-          {EDITABLE_ROWS.map((row) => (
-            <Stack space={4} key={row}>
-              <Text1 regular color={skinVars.colors.textSecondary} transform="uppercase">
-                {t(row)}
-              </Text1>
+          {EDITABLE_ROWS.map((row) => {
+            const chips = (verbs: string[]) => (
               <Inline space={4} wrap verticalSpace={4}>
-                {CAPABILITY_CATALOG[row].map((capability) => (
+                {verbs.map((capability) => (
                   <CatalogChip
                     key={capability}
                     row={row}
                     capability={capability}
+                    rules={hasFinePointer ? rulesByVerb?.get(capability) : undefined}
                     disabled={row === "delegatesTo" && !canDelegate}
                     onAdd={() => startAdd(row, capability)}
                   />
                 ))}
               </Inline>
-            </Stack>
-          ))}
+            );
+            const checked = CAPABILITY_CATALOG[row].filter((verb) => !isUnchecked(verb));
+            const unchecked = CAPABILITY_CATALOG[row].filter(isUnchecked);
+            return (
+              <Stack space={4} key={row} dataAttributes={{ testid: `catalog-row-${row}` }}>
+                <Text1 regular color={skinVars.colors.textSecondary} transform="uppercase">
+                  {t(row)}
+                </Text1>
+                {checked.length > 0 && chips(checked)}
+                {unchecked.length > 0 && (
+                  <Stack space={4} dataAttributes={{ testid: "unchecked-verbs" }}>
+                    <Text1 regular color={skinVars.colors.textSecondary}>{t("uncheckedVerbs")}</Text1>
+                    {chips(unchecked)}
+                  </Stack>
+                )}
+              </Stack>
+            );
+          })}
         </Stack>
       </Box>
     </Boxed>
@@ -294,6 +323,19 @@ function AgentEditModal({ agentId, nodes, edges, onSave, onClose }: AgentEditMod
                     <Text1 regular color={skinVars.colors.textSecondary}>
                       {t("addingCapability", { capability: pending.capability, row: t(pending.row) })}
                     </Text1>
+                    {pendingRules?.length ? (
+                      <Text1 regular color={skinVars.colors.textSecondary}>
+                        {t("checkedBy", { count: pendingRules.length, rules: pendingRules.join(", ") })}
+                      </Text1>
+                    ) : null}
+                    {isUnchecked(pending.capability) && (
+                      <Inline space={8}>
+                        <IconInformationRegular size={16} color={skinVars.colors.neutralHigh} />
+                        <Text1 regular color={skinVars.colors.textSecondary}>
+                          {t("uncheckedVerbNote", { capability: pending.capability })}
+                        </Text1>
+                      </Inline>
+                    )}
                     {pending.row === "delegatesTo" ? (
                       <Select
                         name="delegate-target"

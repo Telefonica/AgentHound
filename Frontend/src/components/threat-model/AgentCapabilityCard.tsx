@@ -79,6 +79,7 @@ function AgentCapabilityCard({ group, onEditAgent }: AgentCapabilityCardProps) {
             <IconButton
               small
               Icon={IconEditRegular}
+              type="brand"
               backgroundType="transparent"
               aria-label={t("editAgent")}
               onPress={() => onEditAgent(agent.id)}

@@ -1,0 +1,246 @@
+{
+  "finding": {
+    "id": "finding_001",
+    "rule_id": "FH-011",
+    "title": "Destructive modification from untrusted input",
+    "severity": "critical",
+    "score": 10.0,
+    "category": "capability_path",
+    "path": [
+      "input_inbound_maintenance_ticket_email",
+      "agent_ticket_intake",
+      "agent_ops_executor",
+      "tool_customer_records_delete",
+      "asset_customer_records_delete_resource"
+    ],
+    "edges": [
+      "edge_007",
+      "edge_008",
+      "edge_003",
+      "edge_004"
+    ],
+    "derivation": "An untrusted input can drive a modify or delete over a data asset of at least medium sensitivity through a tool that is neither approval-gated nor reversible.",
+    "evidence": {
+      "input_trust_level": "untrusted",
+      "data_sensitivity": "high",
+      "destructive_capability": [
+        "deleteResource"
+      ],
+      "requires_approval": false,
+      "side_effect_reversible": false,
+      "agent_count": 2
+    },
+    "recommended_controls": [
+      "humanInTheLoop",
+      "dryRunFirst",
+      "rollbackReady",
+      "softDeleteFallback"
+    ],
+    "owasp_agentic": [
+      "T6"
+    ],
+    "owasp_llm": [
+      "LLM06"
+    ],
+    "mitre_atlas": [
+      "AML.T0048"
+    ],
+    "group_id": "group_001",
+    "finding_class": "attack"
+  },
+  "path_graph": {
+    "nodes": [
+      {
+        "id": "input_inbound_maintenance_ticket_email",
+        "label": "Inbound maintenance ticket email",
+        "type": "input",
+        "risk_score": 10.0,
+        "risk_level": "critical",
+        "finding_ids": [
+          "finding_001"
+        ],
+        "properties": {
+          "trust_level": "untrusted",
+          "content_types": [],
+          "authenticated_source": false,
+          "contains_pii_potential": true,
+          "sanitized_before_agent": false,
+          "injection_detector_present": false,
+          "rate_limit_present": false,
+          "replay_protection": false,
+          "source_type": "external_email"
+        },
+        "badges": [
+          "untrusted"
+        ]
+      },
+      {
+        "id": "agent_ticket_intake",
+        "label": "ticket_intake",
+        "type": "agent",
+        "risk_score": 10.0,
+        "risk_level": "critical",
+        "finding_ids": [
+          "finding_001"
+        ],
+        "properties": {
+          "role_type": "worker",
+          "trust_level": "untrusted",
+          "autonomy_level": "full_auto",
+          "guardrails": [],
+          "exposure_boundary": "internal",
+          "has_scoped_delegation": false
+        },
+        "badges": [
+          "full_auto",
+          "no_guardrails"
+        ]
+      },
+      {
+        "id": "agent_ops_executor",
+        "label": "ops_executor",
+        "type": "agent",
+        "risk_score": 10.0,
+        "risk_level": "critical",
+        "finding_ids": [
+          "finding_001"
+        ],
+        "properties": {
+          "role_type": "worker",
+          "trust_level": "internal_logic",
+          "autonomy_level": "full_auto",
+          "guardrails": [],
+          "exposure_boundary": "internal",
+          "has_scoped_delegation": false
+        },
+        "badges": [
+          "full_auto",
+          "no_guardrails"
+        ]
+      },
+      {
+        "id": "tool_customer_records_delete",
+        "label": "customer_records_delete",
+        "type": "tool",
+        "risk_score": 10.0,
+        "risk_level": "critical",
+        "finding_ids": [
+          "finding_001"
+        ],
+        "properties": {
+          "operation_kind": "delete",
+          "target_boundary": "internal",
+          "side_effect": true,
+          "side_effect_reversible": false,
+          "idempotent": false,
+          "requires_approval": false,
+          "approval_actor_role": "",
+          "authentication_scope": "agent_service_account",
+          "allowlist_present": false,
+          "rate_limit_present": false,
+          "sandbox_enabled": false,
+          "dry_run_available": false,
+          "audit_logging_enabled": false,
+          "capability_kinds": [
+            "deleteResource",
+            "invokeTool"
+          ],
+          "access_kind": "internal_read"
+        },
+        "badges": [
+          "side_effect",
+          "no_approval"
+        ]
+      },
+      {
+        "id": "asset_customer_records_delete_resource",
+        "label": "customer_records_delete resource",
+        "type": "data_asset",
+        "risk_score": 10.0,
+        "risk_level": "critical",
+        "finding_ids": [
+          "finding_001"
+        ],
+        "properties": {
+          "sensitivity": "high",
+          "boundary": "internal",
+          "contains_pii": true,
+          "contains_credentials": false,
+          "contains_regulated_data": [],
+          "access_scope": "all_users",
+          "retention_ttl_days": null,
+          "encryption_at_rest": false,
+          "asset_kind": "database"
+        },
+        "badges": [
+          "high_sensitivity",
+          "pii"
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge_003",
+        "source": "agent_ops_executor",
+        "target": "tool_customer_records_delete",
+        "label": "invokeTool",
+        "capability": "invokeTool",
+        "properties": {},
+        "risk_level": "critical",
+        "blocked": false,
+        "mitigated": false,
+        "detected": false,
+        "finding_ids": [
+          "finding_001"
+        ]
+      },
+      {
+        "id": "edge_004",
+        "source": "tool_customer_records_delete",
+        "target": "asset_customer_records_delete_resource",
+        "label": "deleteResource",
+        "capability": "deleteResource",
+        "properties": {},
+        "risk_level": "critical",
+        "blocked": false,
+        "mitigated": false,
+        "detected": false,
+        "finding_ids": [
+          "finding_001"
+        ]
+      },
+      {
+        "id": "edge_007",
+        "source": "input_inbound_maintenance_ticket_email",
+        "target": "agent_ticket_intake",
+        "label": "receiveInstruction",
+        "capability": "receiveInstruction",
+        "properties": {},
+        "risk_level": "critical",
+        "blocked": false,
+        "mitigated": false,
+        "detected": false,
+        "finding_ids": [
+          "finding_001"
+        ]
+      },
+      {
+        "id": "edge_008",
+        "source": "agent_ticket_intake",
+        "target": "agent_ops_executor",
+        "label": "delegateTo",
+        "capability": "delegateTo",
+        "properties": {
+          "has_scoped_delegation": false
+        },
+        "risk_level": "critical",
+        "blocked": false,
+        "mitigated": false,
+        "detected": false,
+        "finding_ids": [
+          "finding_001"
+        ]
+      }
+    ]
+  }
+}

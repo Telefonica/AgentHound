@@ -95,3 +95,5 @@ enums:
   access_scope: [all_users, role_restricted, owner_only, agent_scoped]
   recipient_type: [named_user, broadcast, system, agent, public_channel]
   scope: [session, user, agent, organization, global]
+  # A list property; other regimes may be declared, but only gdpr is read (FH-026).
+  contains_regulated_data: [gdpr]

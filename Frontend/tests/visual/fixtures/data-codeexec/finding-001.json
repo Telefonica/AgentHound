@@ -1,0 +1,72 @@
+{
+  "finding": {
+    "id": "finding_001",
+    "rule_id": "FH-016",
+    "title": "Code execution tool without sandbox",
+    "severity": "critical",
+    "score": 9.8,
+    "category": "missing_control",
+    "path": [
+      "tool_python_interpreter"
+    ],
+    "edges": [],
+    "derivation": "A tool that accepts executeCode has sandbox isolation disabled, making arbitrary code execution possible even without a full attack path from an untrusted input.",
+    "evidence": {
+      "tool_id": "tool_python_interpreter",
+      "sandbox_enabled": false
+    },
+    "recommended_controls": [
+      "sandboxIsolation",
+      "commandAllowlist"
+    ],
+    "owasp_agentic": [
+      "T4"
+    ],
+    "owasp_llm": [
+      "LLM06"
+    ],
+    "mitre_atlas": [
+      "AML.T0053"
+    ],
+    "group_id": "group_001",
+    "finding_class": "attack"
+  },
+  "path_graph": {
+    "nodes": [
+      {
+        "id": "tool_python_interpreter",
+        "label": "python_interpreter",
+        "type": "tool",
+        "risk_score": 9.8,
+        "risk_level": "critical",
+        "finding_ids": [
+          "finding_001"
+        ],
+        "properties": {
+          "operation_kind": "execute",
+          "target_boundary": "internal",
+          "side_effect": true,
+          "side_effect_reversible": false,
+          "idempotent": false,
+          "requires_approval": false,
+          "approval_actor_role": "",
+          "authentication_scope": "agent_service_account",
+          "allowlist_present": false,
+          "rate_limit_present": false,
+          "sandbox_enabled": false,
+          "dry_run_available": false,
+          "audit_logging_enabled": false,
+          "capability_kinds": [
+            "executeCode"
+          ],
+          "access_kind": "internal_read"
+        },
+        "badges": [
+          "side_effect",
+          "no_approval"
+        ]
+      }
+    ],
+    "edges": []
+  }
+}

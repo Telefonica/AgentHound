@@ -1,0 +1,41 @@
+# Coverage fixture (LangGraph): reaches every rule the adapter can express,
+# using the declarations listed in app/catalogs/adapter_coverage.yaml. Pinned by
+# tests/test_adapter_coverage.py.
+name: Coverage LangGraph
+graph:
+  entry_point: intake
+  nodes:
+    - {name: Customer chat, type: input}
+    - name: intake
+      type: agent
+      exposure_boundary: external
+      delegates_to: [reviewer]
+      tools:
+        - browser.visit
+        - python.run
+        - records update
+        - records delete
+        - {name: release pipeline, capability_kinds: [deployRelease]}
+        - {name: admin api, authentication_scope: elevated}
+    - {name: reviewer, type: agent, trust_level: trusted_core, tools: [slack.postmessage]}
+    - {name: publisher, type: agent}
+    - {name: Customer records, type: data_asset, sensitivity: high}
+    - {name: Partner feed, type: data_asset, boundary: external}
+    - {name: Patient files, type: data_asset, contains_regulated_data: [gdpr]}
+    - {name: Knowledge base, type: data_asset}
+    - {name: Shared context, type: memory, shared: true}
+    - {name: Ops channel, type: output, boundary: external, recipient_type: public_channel}
+    - {name: Public site, type: output, boundary: external}
+  edges:
+    - {source: START, target: Customer chat}
+    - {source: Customer chat, target: intake}
+    - {source: intake, target: Customer records}
+    - {source: intake, target: Partner feed}
+    - {source: intake, target: Patient files}
+    - {source: intake, target: Knowledge base}
+    - {source: intake, target: Ops channel}
+    - {source: intake, target: Shared context}
+    - {source: Shared context, target: reviewer}
+    - {source: Customer records, target: reviewer}
+    - {source: reviewer, target: publisher}
+    - {source: publisher, target: Public site}

@@ -12,7 +12,11 @@
     "lint:fix": "eslint --fix",
     "test:ts": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:unit": "vitest run --project unit",
+    "test:components": "vitest run --project components",
+    "test:watch": "vitest",
+    "test:visual": "playwright test",
+    "test:visual:update": "playwright test --update-snapshots"
   },
   "dependencies": {
     "@dagrejs/dagre": "^3.0.0",
@@ -28,6 +32,7 @@
     "yaml": "^2.9.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@tailwindcss/postcss": "^4.1.18",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -35,6 +40,7 @@
     "eslint": "^9.39.1",
     "eslint-config-next": "16.2.4",
     "eslint-plugin-i18next": "^6.1.4",
+    "jsdom": "^28.1.0",
     "tailwindcss": "^4.1.18",
     "typescript": "~5.9.3",
     "vitest": "^4.1.10"

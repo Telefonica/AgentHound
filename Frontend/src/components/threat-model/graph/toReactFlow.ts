@@ -1,6 +1,6 @@
 import { MarkerType, type Edge, type Node } from "@xyflow/react";
-import type { Severity } from "@/lib/severity";
-import type { Attack, ControlInfo, GraphEdge, GraphNode } from "@/types/ThreatModel";
+import { SEVERITY_RANK, type Severity } from "@/lib/severity";
+import type { Attack, ControlInfo, Finding, GraphEdge, GraphNode } from "@/types/ThreatModel";
 import {
   cyber,
   SCALE_X,
@@ -36,6 +36,13 @@ export interface CyberNodeData extends Record<string, unknown> {
   controlsLabel: string;
   /** Localised per-effect tags shown next to each control in the tooltip. */
   effectLabels: EffectLabels;
+  findingMark?: NodeFindingMark;
+}
+
+export interface NodeFindingMark {
+  severity: Severity;
+  score: number;
+  count: number;
 }
 
 export interface EffectLabels {
@@ -57,6 +64,7 @@ export interface CyberEdgeData extends Record<string, unknown> {
   controlsLabel: string;
   /** Localised per-effect tags shown next to each control in the tooltip. */
   effectLabels: EffectLabels;
+  dimmed?: boolean;
 }
 
 export type CyberNode = Node<CyberNodeData, "cyber">;
@@ -73,13 +81,22 @@ export function dominantEffect(controls: ControlInfo[]): "total" | "partial" | u
   return undefined;
 }
 
-/** Ordered attack chosen for the "play attack" sequence: highest severity first. */
+
+// Scores clamp at 10, so many criticals tie on severity and score alone.
+function compareAttacks(a: Attack, b: Attack): number {
+  return (
+    SEVERITY_RANK[b.severity] - SEVERITY_RANK[a.severity] ||
+    b.score - a.score ||
+    b.exposure - a.exposure ||
+    a.nodes.length - b.nodes.length ||
+    a.id.localeCompare(b.id, undefined, { numeric: true })
+  );
+}
+
+/** Attack chosen for the "play attack" sequence: highest severity and score, then
+ * the route concentrating the most risk, then the most direct one. */
 function primaryAttack(attacks: Attack[]): Attack | undefined {
-  return [...attacks].sort((a, b) => {
-    const SEV_ORDER: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1, none: 0 };
-    const sev = (s: Attack["severity"]) => SEV_ORDER[s] ?? 0;
-    return sev(b.severity) - sev(a.severity) || b.width - a.width;
-  })[0];
+  return attacks.reduce<Attack | undefined>((best, a) => (!best || compareAttacks(a, best) < 0 ? a : best), undefined);
 }
 
 /** Id of the primary FH-001 route (e.g. "FH-001"), for the "primary route" legend row. */
@@ -92,6 +109,83 @@ export function primaryRouteId(attacks: Attack[]): string {
 export function primaryRoute(attacks: Attack[]): { label: string; nodeIds: string[] } | null {
   const a = primaryAttack(attacks);
   return a ? { label: a.label || a.id, nodeIds: a.nodes } : null;
+}
+
+export interface FindingRoute {
+  nodeIds: string[];
+  edgeIds: string[];
+}
+
+// Prefer the finding's own edge ids (the backend lists every parallel edge of
+// each hop); without them, match consecutive `path` pairs in either direction.
+export function findingRoute(finding: Pick<Finding, "path" | "edges">, edges: GraphEdge[]): FindingRoute {
+  const byId = new Map(edges.map((e) => [e.id, e]));
+  let routeEdges = (finding.edges ?? []).flatMap((id) => byId.get(id) ?? []);
+  if (routeEdges.length === 0) {
+    const hops = new Set<string>();
+    finding.path.slice(0, -1).forEach((id, i) => {
+      const next = finding.path[i + 1] ?? "";
+      hops.add(key(id, next)).add(key(next, id));
+    });
+    routeEdges = edges.filter((e) => hops.has(key(e.f, e.t)));
+  }
+  const nodeIds = new Set(finding.path);
+  routeEdges.forEach((e) => nodeIds.add(e.f).add(e.t));
+  return { nodeIds: [...nodeIds], edgeIds: routeEdges.map((e) => e.id) };
+}
+
+export function nodeFindingId(finding: Pick<Finding, "path" | "edges">, edges: GraphEdge[]): string | undefined {
+  const id = finding.path[0];
+  if (id === undefined || finding.path.some((n) => n !== id) || findingRoute(finding, edges).edgeIds.length > 0) return undefined;
+  return id;
+}
+
+export function nodeFindingMarks(
+  findings: Pick<Finding, "path" | "edges" | "severity" | "score">[],
+  edges: GraphEdge[],
+): Map<string, NodeFindingMark> {
+  const marks = new Map<string, NodeFindingMark>();
+  for (const f of findings) {
+    const id = nodeFindingId(f, edges);
+    if (id === undefined) continue;
+    const { severity } = f;
+    const mark = marks.get(id);
+    if (!mark) {
+      marks.set(id, { severity, score: f.score, count: 1 });
+      continue;
+    }
+    mark.count += 1;
+    if (SEVERITY_RANK[severity] > SEVERITY_RANK[mark.severity]) mark.severity = severity;
+    mark.score = Math.max(mark.score, f.score);
+  }
+  return marks;
+}
+
+export interface PlaybackFrame {
+  currentNode: string | undefined;
+  liveNodes: Set<string>;
+  currentEdges: Set<string>;
+  liveEdges: Set<string>;
+}
+
+// An edge lights up once both its ends are reached, which holds for parallel
+// edges and for routes whose edges are not listed in path order.
+export function playbackFrame(
+  route: FindingRoute,
+  step: number,
+  edges: Pick<CyberEdge, "id" | "source" | "target">[],
+): PlaybackFrame {
+  const currentNode = route.nodeIds[step];
+  const liveNodes = new Set(route.nodeIds.slice(0, step + 1));
+  const routeEdgeIds = new Set(route.edgeIds);
+  const currentEdges = new Set<string>();
+  const liveEdges = new Set<string>();
+  for (const e of edges) {
+    if (!routeEdgeIds.has(e.id) || !liveNodes.has(e.source) || !liveNodes.has(e.target)) continue;
+    liveEdges.add(e.id);
+    if (e.source === currentNode || e.target === currentNode) currentEdges.add(e.id);
+  }
+  return { currentNode, liveNodes, currentEdges, liveEdges };
 }
 
 /**
@@ -140,7 +234,10 @@ export function buildGraph(
   edgeControls: Record<string, ControlInfo[]> = {},
   controlsLabel = "",
   effectLabels: EffectLabels = { total: "", partial: "" },
+  findings: Pick<Finding, "path" | "edges" | "severity" | "score">[] = [],
 ): BuiltGraph {
+  const findingMarks = solved ? new Map<string, NodeFindingMark>() : nodeFindingMarks(findings, edges);
+
   const attackedNodeIds = new Set<string>();
   const attackPairs = new Set<string>();
   attacks.forEach((a) => {
@@ -175,6 +272,7 @@ export function buildGraph(
         controls: nodeControls[n.id] ?? [],
         controlsLabel,
         effectLabels,
+        findingMark: findingMarks.get(n.id),
       },
       // Protected nodes sit above neighbours so the padlock stays reachable.
       zIndex: protectedTargets.has(n.id) ? 6 : 1,

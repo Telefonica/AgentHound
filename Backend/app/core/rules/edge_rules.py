@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from ..graph.traversal import CapabilityGraph
 from ..ir.models import Finding
-from .common import as_bool, has_control_targeting, node_props, node_type
+from .common import as_bool, has_control_targeting, node_props, node_type, tool_mediated_hops
 from .registry import make_finding
 from .scoring import ScoreInputs, compute_score, severity_from_score
 
@@ -130,10 +130,21 @@ def fh_025(cg: CapabilityGraph) -> list[Finding]:
     findings: list[Finding] = []
     seen: set[tuple[str, str, str]] = set()
 
+    # (agent, asset, read edge id, path, path edge ids) for both shapes: a direct
+    # agent -> asset read (generic files, declared assets) and a read performed
+    # by a tool the agent invokes (framework adapters route tool reads this way).
+    reads: list[tuple[str, str, str, list[str], list[str]]] = []
     for source, target, key, data in cg.graph.edges(keys=True, data=True):
-        if data.get("capability") != "read":
-            continue
-        if node_type(cg, source) != "agent" or node_type(cg, target) != "data_asset":
+        if data.get("capability") == "read" and node_type(cg, source) == "agent":
+            reads.append((source, target, key, [source, target], [key]))
+    for agent in cg.nodes_of_type("agent"):
+        for tool, target in tool_mediated_hops(cg, agent, "read"):
+            invoke_ids = cg.hop_edge_ids_for(agent, tool, "invokeTool")
+            for key in cg.hop_edge_ids_for(tool, target, "read"):
+                reads.append((agent, target, key, [agent, tool, target], invoke_ids + [key]))
+
+    for source, target, key, path, path_edges in reads:
+        if node_type(cg, target) != "data_asset":
             continue
         tgt_props = node_props(cg, target)
         if not (
@@ -168,8 +179,8 @@ def fh_025(cg: CapabilityGraph) -> list[Finding]:
                 finding_id="pending",
                 severity=severity_from_score(score),
                 score=score,
-                path=[source, target],
-                edges=[key],
+                path=path,
+                edges=path_edges,
                 evidence={
                     "agent_id": source,
                     "asset_id": target,

@@ -19,7 +19,14 @@ pnpm build       # production build
 pnpm start       # serve the production build
 pnpm test:ts     # type-check (tsc --noEmit)
 pnpm lint        # eslint
+pnpm test        # unit (Node) and component (jsdom) tests with Vitest
+pnpm test:visual # Playwright visual regression tests against a production build
 ```
+
+The visual baselines (`tests/visual/**/*-chromium-darwin.png`) were generated on
+macOS, so for now `pnpm test:visual` only passes there. On Linux or Windows,
+generate local baselines first with `pnpm test:visual:update` and do not commit them.
+The visual run builds into `.next-visual/`, so it leaves the regular `.next/` alone.
 
 ## Configuration
 
@@ -35,7 +42,7 @@ NEXT_PUBLIC_AGENTHOUND_API_URL=http://localhost:8000
 The API layer lives in [`src/lib/api/`](src/lib/api/):
 
 - `client.ts` — `fetch` wrapper; resolves the base URL and maps the backend error envelope to an `ApiError`.
-- `agentHound.ts` — endpoint calls: `createAnalysis` (parse only), `analyze` (run the rule engine, optionally over the edited graph), `getGraph`, `getFindings`, `getControlRecommendations`, `simulateControls`.
+- `agentHound.ts` — endpoint calls: `createAnalysis` (parse only), `analyze` (run the rule engine, optionally over the edited graph), `getGraph`, `getFindings`, `getFinding` (one finding plus its path subgraph, drawn alone from the graph toolbar), `getControlRecommendations`, `simulateControls`.
 - `types.ts` — raw backend (snake_case) response shapes.
 - `adapters.ts` — maps backend shapes to the camelCase UI types. Because the backend graph carries no coordinates, `toGraphNodes` assigns node `x`/`y` with a swimlane layout (one lane per node type); attack overlays are derived from critical/high finding paths. `toSolutionResult` maps the recommend + simulate responses into the **Proposed Solution** (before/after metrics, remediation timeline, and the mitigated graph with `blocked`/`mitigated` edges and applied-control nodes).
 

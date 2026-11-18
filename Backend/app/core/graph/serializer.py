@@ -74,19 +74,28 @@ def serialize_graph(
     mitigated = set(mitigated_edge_ids or ())
     detected = set(detected_edge_ids or ())
 
-    # Pre-index findings by node id and edge id.
+    # Pre-index findings by node id and edge id. Nodes get the same
+    # finding_ids/risk_level as edges so node-scoped findings (which carry no
+    # edges) are still visible on the graph.
     node_scores: dict[str, float] = {}
+    node_findings: dict[str, list[str]] = {}
+    node_severity: dict[str, Severity] = {}
     edge_findings: dict[str, list[str]] = {}
     edge_severity: dict[str, Severity] = {}
 
+    def _raise(severities: dict[str, Severity], key: str, severity: Severity) -> None:
+        current = severities.get(key)
+        if current is None or _SEVERITY_RANK[severity] > _SEVERITY_RANK[current]:
+            severities[key] = severity
+
     for finding in findings:
-        for node_id in finding.path:
+        for node_id in dict.fromkeys(finding.path):
             node_scores[node_id] = max(node_scores.get(node_id, 0.0), finding.score)
+            node_findings.setdefault(node_id, []).append(finding.id)
+            _raise(node_severity, node_id, finding.severity)
         for edge_id in finding.edges:
             edge_findings.setdefault(edge_id, []).append(finding.id)
-            current = edge_severity.get(edge_id)
-            if current is None or _SEVERITY_RANK[finding.severity] > _SEVERITY_RANK[current]:
-                edge_severity[edge_id] = finding.severity
+            _raise(edge_severity, edge_id, finding.severity)
 
     nodes = [
         {
@@ -94,6 +103,8 @@ def serialize_graph(
             "label": node.name,
             "type": node.type.value,
             "risk_score": round(node_scores.get(node.id, 0.0), 1),
+            "risk_level": (node_severity.get(node.id) or Severity.INFO).value,
+            "finding_ids": node_findings.get(node.id, []),
             "properties": node.properties,
             "badges": _node_badges(node.type, node.properties),
         }

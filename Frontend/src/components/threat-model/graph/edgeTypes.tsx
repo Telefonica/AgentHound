@@ -234,6 +234,8 @@ const CyberEdgeView = memo((props: EdgeProps<CyberEdge>) => {
               flexDirection: "column",
               alignItems: "center",
               gap: 3,
+              opacity: data?.dimmed ? 0.22 : 1,
+              transition: "opacity .3s ease",
             }}
           >
             {isDanger ? (

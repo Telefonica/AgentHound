@@ -1,0 +1,432 @@
+{
+  "capabilities": [
+    {
+      "verb": "receiveInstruction",
+      "description": "An input delivers instructions/content to an agent.",
+      "typical_source": "input",
+      "typical_target": "agent",
+      "evaluated_by": []
+    },
+    {
+      "verb": "receiveEvent",
+      "description": "An input delivers an event or trigger signal that initiates the agent flow.",
+      "typical_source": "input",
+      "typical_target": "agent",
+      "evaluated_by": []
+    },
+    {
+      "verb": "read",
+      "description": "Read data from a data asset or tool.",
+      "typical_source": "agent",
+      "typical_target": "data_asset",
+      "evaluated_by": [
+        "FH-001",
+        "FH-002",
+        "FH-004",
+        "FH-013",
+        "FH-025",
+        "FH-034"
+      ]
+    },
+    {
+      "verb": "search",
+      "description": "Search/query over a data asset (a refinement of read).",
+      "typical_source": "agent",
+      "typical_target": "data_asset",
+      "evaluated_by": []
+    },
+    {
+      "verb": "fetchWeb",
+      "description": "Retrieve external web/network content. Primary vector for indirect prompt injection.",
+      "typical_source": "agent",
+      "typical_target": "data_asset",
+      "evaluated_by": [
+        "FH-006",
+        "FH-008"
+      ]
+    },
+    {
+      "verb": "observeState",
+      "description": "Query the current state of a system, process or resource without modifying it.",
+      "typical_source": "agent",
+      "typical_target": "tool",
+      "evaluated_by": []
+    },
+    {
+      "verb": "extractInformation",
+      "description": "Extract structured information from content (a refinement of read).",
+      "typical_source": "agent",
+      "typical_target": "data_asset",
+      "evaluated_by": []
+    },
+    {
+      "verb": "classify",
+      "description": "Assign a category, label, priority or type to an element.",
+      "typical_source": "agent",
+      "typical_target": "data_asset",
+      "evaluated_by": []
+    },
+    {
+      "verb": "summarize",
+      "description": "Reduce information while preserving what is essential.",
+      "typical_source": "agent",
+      "typical_target": "data_asset",
+      "evaluated_by": []
+    },
+    {
+      "verb": "interpretIntent",
+      "description": "Infer what a user or system wants to achieve from an instruction.",
+      "typical_source": "agent",
+      "typical_target": "input",
+      "evaluated_by": [
+        "FH-015",
+        "FH-033"
+      ]
+    },
+    {
+      "verb": "validate",
+      "description": "Check whether something meets rules, format or conditions.",
+      "typical_source": "agent",
+      "typical_target": "data_asset",
+      "evaluated_by": []
+    },
+    {
+      "verb": "plan",
+      "description": "Decompose an objective into an executable sequence of steps.",
+      "typical_source": "agent",
+      "typical_target": "agent",
+      "evaluated_by": []
+    },
+    {
+      "verb": "decide",
+      "description": "Choose between alternatives according to criteria.",
+      "typical_source": "agent",
+      "typical_target": "agent",
+      "evaluated_by": []
+    },
+    {
+      "verb": "infer",
+      "description": "Deduce information not explicitly present from available data.",
+      "typical_source": "agent",
+      "typical_target": "agent",
+      "evaluated_by": []
+    },
+    {
+      "verb": "prioritize",
+      "description": "Order actions or items by importance.",
+      "typical_source": "agent",
+      "typical_target": "agent",
+      "evaluated_by": []
+    },
+    {
+      "verb": "resolveConflict",
+      "description": "Handle inconsistencies between sources, constraints or instructions.",
+      "typical_source": "agent",
+      "typical_target": "agent",
+      "evaluated_by": []
+    },
+    {
+      "verb": "rewrite",
+      "description": "Modify form, tone, structure or style of content while preserving meaning.",
+      "typical_source": "agent",
+      "typical_target": "data_asset",
+      "evaluated_by": []
+    },
+    {
+      "verb": "translate",
+      "description": "Convert content between human languages or between formal languages (e.g. NL→SQL).",
+      "typical_source": "agent",
+      "typical_target": "data_asset",
+      "evaluated_by": []
+    },
+    {
+      "verb": "convertFormat",
+      "description": "Transform data from one format to another without changing its semantics.",
+      "typical_source": "agent",
+      "typical_target": "data_asset",
+      "evaluated_by": []
+    },
+    {
+      "verb": "normalizeData",
+      "description": "Homogenize structures, units or values to a canonical form.",
+      "typical_source": "agent",
+      "typical_target": "data_asset",
+      "evaluated_by": []
+    },
+    {
+      "verb": "enrichData",
+      "description": "Add additional information by consulting other sources.",
+      "typical_source": "agent",
+      "typical_target": "data_asset",
+      "evaluated_by": []
+    },
+    {
+      "verb": "generateContent",
+      "description": "Create new content (textual, structured or code) where none existed before.",
+      "typical_source": "agent",
+      "typical_target": "data_asset",
+      "evaluated_by": []
+    },
+    {
+      "verb": "executeCode",
+      "description": "Execute code / shell commands.",
+      "typical_source": "agent",
+      "typical_target": "tool",
+      "evaluated_by": [
+        "FH-010",
+        "FH-016"
+      ]
+    },
+    {
+      "verb": "invokeTool",
+      "description": "Invoke a tool (wraps a concrete operation).",
+      "typical_source": "agent",
+      "typical_target": "tool",
+      "evaluated_by": [
+        "FH-008",
+        "FH-011",
+        "FH-025"
+      ]
+    },
+    {
+      "verb": "send",
+      "description": "Send data to an output/sink.",
+      "typical_source": "agent",
+      "typical_target": "output",
+      "evaluated_by": [
+        "FH-001",
+        "FH-003",
+        "FH-004",
+        "FH-013",
+        "FH-015"
+      ]
+    },
+    {
+      "verb": "createResource",
+      "description": "Create a new resource (additive side effect).",
+      "typical_source": "agent",
+      "typical_target": "output",
+      "evaluated_by": []
+    },
+    {
+      "verb": "modifyResource",
+      "description": "Modify an existing resource (mutating side effect).",
+      "typical_source": "agent",
+      "typical_target": "output",
+      "evaluated_by": [
+        "FH-011"
+      ]
+    },
+    {
+      "verb": "deleteResource",
+      "description": "Delete a resource (destructive, often irreversible).",
+      "typical_source": "agent",
+      "typical_target": "output",
+      "evaluated_by": [
+        "FH-011",
+        "FH-015",
+        "FH-032"
+      ]
+    },
+    {
+      "verb": "moveResource",
+      "description": "Change the location of or duplicate data (e.g. copy to public storage, export file).",
+      "typical_source": "agent",
+      "typical_target": "data_asset",
+      "evaluated_by": [
+        "FH-012"
+      ]
+    },
+    {
+      "verb": "deployRelease",
+      "description": "Make a resource or change available in a production environment.",
+      "typical_source": "agent",
+      "typical_target": "tool",
+      "evaluated_by": [
+        "FH-012",
+        "FH-015",
+        "FH-032"
+      ]
+    },
+    {
+      "verb": "respondUser",
+      "description": "Return a reply, explanation or result to the user who originated the request.",
+      "typical_source": "agent",
+      "typical_target": "output",
+      "evaluated_by": [
+        "FH-013"
+      ]
+    },
+    {
+      "verb": "notify",
+      "description": "Proactively inform a person or system of an event or result.",
+      "typical_source": "agent",
+      "typical_target": "output",
+      "evaluated_by": [
+        "FH-013"
+      ]
+    },
+    {
+      "verb": "requestInformation",
+      "description": "Ask a person for missing data, clarification or approval.",
+      "typical_source": "agent",
+      "typical_target": "output",
+      "evaluated_by": []
+    },
+    {
+      "verb": "delegateTo",
+      "description": "Delegate work/authority to another agent.",
+      "typical_source": "agent",
+      "typical_target": "agent",
+      "evaluated_by": [
+        "FH-007",
+        "FH-014",
+        "FH-023"
+      ]
+    },
+    {
+      "verb": "dataFlow",
+      "description": "Generic propagation of data between nodes.",
+      "typical_source": "agent",
+      "typical_target": "agent",
+      "evaluated_by": [
+        "FH-007",
+        "FH-024"
+      ]
+    },
+    {
+      "verb": "escalate",
+      "description": "Transfer a situation to a higher-level person, team or system.",
+      "typical_source": "agent",
+      "typical_target": "output",
+      "evaluated_by": []
+    },
+    {
+      "verb": "readMemory",
+      "description": "Read from a memory store.",
+      "typical_source": "agent",
+      "typical_target": "memory",
+      "evaluated_by": [
+        "FH-009"
+      ]
+    },
+    {
+      "verb": "writeMemory",
+      "description": "Write to a memory store.",
+      "typical_source": "agent",
+      "typical_target": "memory",
+      "evaluated_by": [
+        "FH-009"
+      ]
+    },
+    {
+      "verb": "updateContext",
+      "description": "Maintain relevant information during a task or session (short-term memory).",
+      "typical_source": "agent",
+      "typical_target": "memory",
+      "evaluated_by": []
+    },
+    {
+      "verb": "forgetContext",
+      "description": "Remove irrelevant, sensitive or expired context.",
+      "typical_source": "agent",
+      "typical_target": "memory",
+      "evaluated_by": []
+    },
+    {
+      "verb": "manageWorkflowState",
+      "description": "Maintain the progress of a multi-step task or workflow.",
+      "typical_source": "agent",
+      "typical_target": "memory",
+      "evaluated_by": []
+    },
+    {
+      "verb": "authenticate",
+      "description": "Obtain or use credentials to access resources.",
+      "typical_source": "agent",
+      "typical_target": "tool",
+      "evaluated_by": []
+    },
+    {
+      "verb": "authorize",
+      "description": "Check permissions before acting.",
+      "typical_source": "agent",
+      "typical_target": "tool",
+      "evaluated_by": []
+    },
+    {
+      "verb": "requestConfirmation",
+      "description": "Request explicit approval before a sensitive action.",
+      "typical_source": "agent",
+      "typical_target": "output",
+      "evaluated_by": []
+    },
+    {
+      "verb": "auditLog",
+      "description": "Record actions, decisions and outcomes for traceability.",
+      "typical_source": "agent",
+      "typical_target": "output",
+      "evaluated_by": []
+    },
+    {
+      "verb": "protectInformation",
+      "description": "Apply transformations to prevent improper data exposure (redaction, encryption).",
+      "typical_source": "agent",
+      "typical_target": "data_asset",
+      "evaluated_by": []
+    },
+    {
+      "verb": "detectRisk",
+      "description": "Identify dangerous, anomalous or disallowed actions before executing them.",
+      "typical_source": "agent",
+      "typical_target": "input",
+      "evaluated_by": []
+    },
+    {
+      "verb": "verifyResult",
+      "description": "Check that an action produced the expected effect.",
+      "typical_source": "agent",
+      "typical_target": "tool",
+      "evaluated_by": [
+        "FH-030"
+      ]
+    },
+    {
+      "verb": "handleError",
+      "description": "Detect, interpret and respond to failures.",
+      "typical_source": "agent",
+      "typical_target": "agent",
+      "evaluated_by": []
+    },
+    {
+      "verb": "retry",
+      "description": "Re-execute an action after a transient failure.",
+      "typical_source": "agent",
+      "typical_target": "tool",
+      "evaluated_by": [
+        "FH-031"
+      ]
+    },
+    {
+      "verb": "rollback",
+      "description": "Revert a previous action or change.",
+      "typical_source": "agent",
+      "typical_target": "tool",
+      "evaluated_by": []
+    },
+    {
+      "verb": "recordProgress",
+      "description": "Maintain a persistent trace of steps performed.",
+      "typical_source": "agent",
+      "typical_target": "output",
+      "evaluated_by": []
+    },
+    {
+      "verb": "finalizeTask",
+      "description": "Formally close a task with an explicit result.",
+      "typical_source": "agent",
+      "typical_target": "output",
+      "evaluated_by": []
+    }
+  ]
+}
