@@ -376,8 +376,15 @@ def fh_009(cg: CapabilityGraph) -> list[Finding]:
                     continue
                 seen.add(key)
 
-                # Combine write path with the reading agent for the representative path.
-                full_path = write_path + [reader]
+                # Extend the finding through the concrete downstream target.
+                # Previously the representative path stopped at the reading agent,
+                # even though the finding evidence identified a reachable target.
+                # That made the UI path incomplete and obscured the actual sink.
+                downstream_paths = cg.simple_paths(reader, target)
+                if not downstream_paths:
+                    continue
+                downstream_path = min(downstream_paths, key=lambda p: (len(p), tuple(p)))
+                full_path = write_path + downstream_path
                 agents = _agents_on_path(cg, full_path)
                 external_reach = (
                     "external"
